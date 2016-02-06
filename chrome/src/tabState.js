@@ -74,3 +74,8 @@ class TabState {
     alert(nativeData)
   }
 }
+
+// export stuff for testing
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = TabState
+}

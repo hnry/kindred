@@ -3,7 +3,7 @@
   this extension
   and how to interact with those sites
  */
-const modules = [
+const configModules = [
   {
     // any name to identify this module
     name: 'Test module',
@@ -19,9 +19,8 @@ const modules = [
   }
 ]
 
-const Tabs = new TabState()
 const NativeRunning = false
-const NativeHostname = 'com.qtop.nmh'
+const NativeHostname = 'com.kindred_edit.nmh'
 
 function NativeSend(msg) {
   chrome.runtime.sendNativeMessage(NativeHostname, msg)
@@ -33,7 +32,7 @@ function NativeConnect(responseHandler) {
 }
 
 // broker (between tab state and native messaging)
-Tabs.subscribe((state) => {
+const broker = (Tabs, state) => {
   const payload = { files: [] }
 
   state.forEach((tab, idx) => {
@@ -53,23 +52,23 @@ Tabs.subscribe((state) => {
     })
     NativeSend(payload)
   }
-})
+}
 
 // chrome
-chrome.tabs.onUpdated.addListener((tabId, changedProps, tab) => {
+const onUpdated = (Tabs, tabId, changedProps, tab) => {
   // see if this tabId is already known
   const t = Tabs.get(tabId)
   let matched = false
 
-  for (let i = 0, l = modules.length; i < l; i++) {
+  for (let i = 0, l = configModules.length; i < l; i++) {
     // TODO the hostname information should be normalized to lower case
     // while keeping the uri case intact
-    if (modules[i].url == tab.url) {
+    if (configModules[i].url == tab.url) {
       // if we do not know about this tab, add it
       if (!t) {
-        Tabs.add(tabId, tab.url, modules[i])
+        Tabs.add(tabId, tab.url, configModules[i])
       } else {
-        Tabs.update(tabId, tab.url, modules[i])
+        Tabs.update(tabId, tab.url, configModules[i])
       }
       matched = true
       break;
@@ -81,8 +80,22 @@ chrome.tabs.onUpdated.addListener((tabId, changedProps, tab) => {
   if (t && !matched) {
     Tabs.remove(tabId, false)
   }
-})
+}
 
-chrome.tabs.onRemoved.addListener((tabId) => {
+const onRemoved = (Tabs, tabId) => {
   Tabs.remove(tabId, true)
-})
+}
+
+// export stuff for testing
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports.NativeRunning = NativeRunning
+  module.exports.broker = broker
+  module.exports.onUpdated = onUpdated
+  module.exports.onRemoved = onRemoved
+} else {
+// if not for testing, init things for chrome
+  const t = new TabState()
+  t.subscribe(broker.bind(undefined, t))
+  chrome.tabs.onUpdated.addListener(onUpdated.bind(undefined, t))
+  chrome.tabs.onRemoved.addListener(onRemoved.bind(undefined, t))
+}

@@ -31,7 +31,21 @@ function NativeConnect(responseHandler) {
   port.onMessage.addListener(responseHandler)
 }
 
+// processes incoming native messages
+// and syncs tabs that need the data
+const sync = () => {
+
+}
+
+// creates a obj literal for JSON request to
+// native.
+// contains all file information
+const pack = () => {
+
+}
+
 // broker (between tab state and native messaging)
+// packs() outgoing data then sync() incoming data
 const broker = (Tabs, state) => {
   const payload = { files: [] }
 
@@ -54,8 +68,7 @@ const broker = (Tabs, state) => {
   }
 }
 
-// chrome
-const onUpdated = (Tabs, tabId, changedProps, tab) => {
+const chromeOnUpdated = (Tabs, tabId, changedProps, tab) => {
   // see if this tabId is already known
   const t = Tabs.get(tabId)
   let matched = false
@@ -82,20 +95,22 @@ const onUpdated = (Tabs, tabId, changedProps, tab) => {
   }
 }
 
-const onRemoved = (Tabs, tabId) => {
+const chromeOnRemoved = (Tabs, tabId) => {
   Tabs.remove(tabId, true)
 }
 
 // export stuff for testing
 if (typeof module !== 'undefined' && module.exports) {
   module.exports.NativeRunning = NativeRunning
+  module.exports.sync = sync
+  module.exports.pack = pack
   module.exports.broker = broker
-  module.exports.onUpdated = onUpdated
-  module.exports.onRemoved = onRemoved
+  module.exports.onUpdated = chromeOnUpdated
+  module.exports.chromeOnRemoved = chromeOnRemoved
 } else {
 // if not for testing, init things for chrome
   const t = new TabState()
   t.subscribe(broker.bind(undefined, t))
-  chrome.tabs.onUpdated.addListener(onUpdated.bind(undefined, t))
-  chrome.tabs.onRemoved.addListener(onRemoved.bind(undefined, t))
+  chrome.tabs.onUpdated.addListener(chromeOnUpdated.bind(undefined, t))
+  chrome.tabs.onRemoved.addListener(chromeOnRemoved.bind(undefined, t))
 }

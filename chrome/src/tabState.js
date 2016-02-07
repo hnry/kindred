@@ -69,10 +69,6 @@ class TabState {
       fn(this._tabs)
     })
   }
-
-  updateSync(nativeData) {
-    alert(nativeData)
-  }
 }
 
 // export stuff for testing

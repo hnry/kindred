@@ -1,9 +1,9 @@
 /*
-  modules are user configurable JSON that tells what sites should trigger
+  actions are user configurable JSON that tells what sites should trigger
   this extension
   and how to interact with those sites
  */
-const configModules = [
+const actions = [
   {
     // any name to identify this module
     name: 'Test module',
@@ -33,55 +33,66 @@ function NativeConnect(responseHandler) {
 
 // processes incoming native messages
 // and syncs tabs that need the data
-const sync = () => {
+//
+// r, w -> Tabs, actions, chrome
+const sync = (Tabs, actions, fileData) => {
 
 }
 
 // creates a obj literal for JSON request to
 // native.
 // contains all file information
-const pack = () => {
-
-}
-
-// broker (between tab state and native messaging)
-// packs() outgoing data then sync() incoming data
-const broker = (Tabs, state) => {
+const pack = (state) => {
   const payload = { files: [] }
-
   state.forEach((tab, idx) => {
     if (tab && tab.file) {
       payload.files.push(tab.file)
-
-      // TODO what happens if we send a message before connecting?
-      if (NativeRunning) {
-        NativeSend(payload)
-      }
     }
   })
+  return payload
+}
 
-  if (!NativeRunning && payload.files.length > 0) {
-    NativeConnect((msg) => {
-      Tabs.updateSync(msg)
-    })
-    NativeSend(payload)
+// brokers a bunch of stuff (sets up dependencies)
+// packs() outgoing data then sets up sync()
+// for incoming data
+//
+// native
+const broker = (Tabs, nConnect, nSend, actions, state) => {
+  const payload = pack(state)
+  if (payload.files.length == 0) {
+    return
+  }
+
+  if (NativeRunning) {
+    nSend(payload)
+  } else {
+    nConnect(sync.bind(undefined, Tabs, actions))
+    nSend(payload)
   }
 }
 
+// 1. figures out if existing tab state is stale and removes it
+// 2. sees if tab is a match
+// 3. figures out if match is 'actionable'; must get file path
+// 4. generates a tab state object based on 2,3
+// 5. adds or updates tab state
+//
+// r,w -> Tabs, chrome, actions
 const chromeOnUpdated = (Tabs, tabId, changedProps, tab) => {
   // see if this tabId is already known
   const t = Tabs.get(tabId)
   let matched = false
 
-  for (let i = 0, l = configModules.length; i < l; i++) {
+  for (let i = 0, l = actions.length; i < l; i++) {
     // TODO the hostname information should be normalized to lower case
     // while keeping the uri case intact
-    if (configModules[i].url == tab.url) {
+    if (actions[i].url == tab.url) {
       // if we do not know about this tab, add it
       if (!t) {
-        Tabs.add(tabId, tab.url, configModules[i])
+        Tabs.add(tabId, tab.url, actions[i])
+        chrome.pageAction.show(tabId)
       } else {
-        Tabs.update(tabId, tab.url, configModules[i])
+        Tabs.update(tabId, tab.url, actions[i])
       }
       matched = true
       break;
@@ -91,12 +102,15 @@ const chromeOnUpdated = (Tabs, tabId, changedProps, tab) => {
   // if Tabs knows about this tabId, but no match, the URL and
   // Tabs should no longer know about this tabId
   if (t && !matched) {
-    Tabs.remove(tabId, false)
+    Tabs.remove(tabId)
   }
 }
 
+// w -> Tabs, chrome
 const chromeOnRemoved = (Tabs, tabId) => {
-  Tabs.remove(tabId, true)
+  Tabs.remove(tabId)
+  // no longer need icon for chrome tabs removed
+  chrome.pageAction.hide(tabId)
 }
 
 // export stuff for testing
@@ -110,7 +124,7 @@ if (typeof module !== 'undefined' && module.exports) {
 } else {
 // if not for testing, init things for chrome
   const t = new TabState()
-  t.subscribe(broker.bind(undefined, t))
+  t.subscribe(broker.bind(undefined, t, NativeConnect, NativeSend, actions))
   chrome.tabs.onUpdated.addListener(chromeOnUpdated.bind(undefined, t))
   chrome.tabs.onRemoved.addListener(chromeOnRemoved.bind(undefined, t))
 }

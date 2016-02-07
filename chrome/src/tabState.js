@@ -34,7 +34,6 @@ class TabState {
   }
 
   add(tabId, url, moduleData, file) {
-    chrome.pageAction.show(tabId)
     this.update(tabId, url, moduleData, file)
   }
 
@@ -48,11 +47,7 @@ class TabState {
     this.publish()
   }
 
-  remove(tabId, closed) {
-    if (!closed) {
-      chrome.pageAction.hide(tabId)
-    }
-
+  remove(tabId) {
     const tid = this._getIndex(tabId)
     if (tid !== undefined) {
       this._tabs[tid] = null

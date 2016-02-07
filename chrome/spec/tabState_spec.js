@@ -100,10 +100,4 @@ describe('TabState', () => {
     })
   })
 
-  describe('updateSync', () => {
-    it('', () => {
-
-    })
-  })
-
 })

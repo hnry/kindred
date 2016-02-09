@@ -3,7 +3,9 @@
   "version": "0.0.1",
   "description": "(chrome extension) use your editor instead of a web editor",
   "main": "index.js",
-  "dependencies": {},
+  "dependencies": {
+    "sizzle": "^2.3.0"
+  },
   "devDependencies": {
     "babel-cli": "^6.4.5",
     "babel-preset-es2015": "^6.3.13",

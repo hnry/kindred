@@ -57,15 +57,32 @@ function _cmpUrl(url, aUrl) {
 }
 
 function _makeTabData(id, tab, action, actionable) {
-  return {id: id}
+  let t = {
+    id: id,
+    url: tab.url
+  }
+
+  if (actionable) {
+    chrome.tabs.executeScript(id, {file: 'sizzle.js'}, () => {
+      chrome.tabs.executeScript(id, {file: 'actionName.js'}, () => {
+        chrome.tabs.executeScript(id, {code: 'kindredActions('+JSON.stringify(action.actions)+')'})
+      })
+    })
+  }
+
+  return t
 }
 
-function _getActionName() {
+// sender = { id, url, tab{} }
+function _getActionName(req, sender, reply) {
 
 }
 
-function getActions() {
-
+function getActions(callback) {
+  let a = defaultActions || []
+  chrome.storage.sync.get('actions', (actions) => {
+    callback(a)
+  })
 }
 
 // 1. figures out if existing tab state is stale and removes it
@@ -76,8 +93,10 @@ function getActions() {
 //
 // w -> Tabs, chrome, actions
 const chromeOnUpdated = (Tabs, getActions, tabId, changedProps, tab) => {
+  if (changedProps.status !== 'complete') {
+    return
+  }
   let matched = false
-  const actions = getActions()
 
   function add(action, actionable) {
     const tabData = _makeTabData(tabId, tab, action, actionable)
@@ -86,27 +105,28 @@ const chromeOnUpdated = (Tabs, getActions, tabId, changedProps, tab) => {
     chrome.pageAction.show(tabId)
   }
 
-  for (let i = 0, l = actions.length; i < l; i++) {
-    if (_cmpUrl(tab.url, actions[i].url)) {
-      add(actions[i], false)
-      break;
+  getActions((actions) => {
+    for (let i = 0, l = actions.length; i < l; i++) {
+      if (_cmpUrl(tab.url, actions[i].actionUrl)) {
+        add(actions[i], true)
+        break;
+      }
+      if (_cmpUrl(tab.url, actions[i].url)) {
+        add(actions[i], false)
+        break;
+      }
     }
-    if (_cmpUrl(tab.url, actions[i].actionUrl)) {
-      add(actions[i], true)
-      break;
-    }
-  }
 
-  if (Tabs._findIndexById(tabId) !== undefined && !matched) {
-    Tabs.removeState(tabId)
-  }
+    if (Tabs._findIndexById(tabId) !== undefined && !matched) {
+      chrome.pageAction.hide(tabId)
+      Tabs.removeState(tabId)
+    }
+  })
 }
 
 // w -> Tabs, chrome
 const chromeOnRemoved = (Tabs, tabId) => {
   Tabs.removeState(tabId)
-  // no longer need icon for chrome tabs removed
-  chrome.pageAction.hide(tabId)
 }
 
 // export stuff for testing
@@ -124,4 +144,5 @@ if (typeof module !== 'undefined' && module.exports) {
   const t = new TabState(onChange.bind(undefined, NativeConnect, NativeSend, getActions))
   chrome.tabs.onUpdated.addListener(chromeOnUpdated.bind(undefined, t, getActions))
   chrome.tabs.onRemoved.addListener(chromeOnRemoved.bind(undefined, t))
+  chrome.runtime.onMessage.addListener(_getActionName)
 }

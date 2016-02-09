@@ -2,8 +2,8 @@ var TabState = require('../ext/tabState')
 var background = require('../ext/background')
 var testActions = require('./support/actions')
 
-function getTestActions() {
-  return testActions
+function getTestActions(callback) {
+  callback(testActions)
 }
 
 describe('background', () => {
@@ -57,7 +57,7 @@ describe('background', () => {
         return testActions
       }
       Tabs.state.push({id: 5})
-      background.chromeOnUpdated(Tabs, getTestActions, 5, {}, { url: 'test' })
+      background.chromeOnUpdated(Tabs, getTestActions, 5, { status: 'complete' }, { url: 'test' })
       expect(Tabs.state.length).toEqual(0)
     })
 
@@ -66,7 +66,7 @@ describe('background', () => {
         expect(tab.id).toEqual(700)
         done()
       }
-      background.chromeOnUpdated(Tabs, getTestActions, 700, { url: testActions[0].url }, { url: testActions[0].url })
+      background.chromeOnUpdated(Tabs, getTestActions, 700, { status: 'complete' }, { url: testActions[0].url })
     })
 
     it('matches action url, and figures out file path', () => {
@@ -75,15 +75,10 @@ describe('background', () => {
   })
 
   describe('chromeOnRemoved', () => {
-    it('calls removeState and hides chrome icon', (done) => {
+    it('calls TabState#removeState', (done) => {
       var removeCalled = false
       Tabs.removeState = (tabId) => {
         expect(tabId).toEqual(5)
-        removeCalled = true
-      }
-      chrome.pageAction.hide = (tabId) => {
-        expect(tabId).toEqual(5)
-        expect(removeCalled).toBe(true)
         done()
       }
       background.chromeOnRemoved(Tabs, 5)

@@ -1,24 +1,3 @@
-/*
-  actions are user configurable JSON that tells what sites should trigger
-  this extension
-  and how to interact with those sites
- */
-const actions = [
-  {
-    // any name to identify this module
-    name: 'Test module',
-    // url that triggers extension icon on address bar
-    url: 'https://www.google.com/?gws_rd=ssl',
-    // url that has a editable input to hook into
-    actionUrl: '',
-    // jquery selector to find the editable element on actionUrl
-    // eg: '#id' , 'td tr p'
-    actionElementEdit: '',
-    // jquery selector to determine possible filename for this action
-    actionElementName: ''
-  }
-]
-
 const NativeRunning = false
 const NativeHostname = 'com.kindred_edit.nmh'
 
@@ -59,7 +38,7 @@ const pack = (state) => {
 // for incoming data
 //
 // native
-const onChange = (nConnect, nSend, actions, state) => {
+const onChange = (nConnect, nSend, getActions, state) => {
   const payload = pack(state)
   if (payload.files.length == 0) {
     return
@@ -68,42 +47,57 @@ const onChange = (nConnect, nSend, actions, state) => {
   if (NativeRunning) {
     nSend(payload)
   } else {
-    nConnect(sync.bind(undefined, state, actions))
+    nConnect(sync.bind(undefined, state, getActions))
     nSend(payload)
   }
+}
+
+function _cmpUrl(url, aUrl) {
+  return url === aUrl
+}
+
+function _makeTabData(id, tab, action, actionable) {
+  return {id: id}
+}
+
+function _getActionName() {
+
+}
+
+function getActions() {
+
 }
 
 // 1. figures out if existing tab state is stale and removes it
 // 2. sees if tab is a match
 // 3. figures out if match is 'actionable'; must get file path
 // 4. generates a tab state object based on 2,3
-// 5. adds or updates tab state
+// 5. adds or updates tab state for this tab
 //
 // w -> Tabs, chrome, actions
-const chromeOnUpdated = (Tabs, tabId, changedProps, tab) => {
-  // see if this tabId is already known
-  const t = Tabs.get(tabId)
+const chromeOnUpdated = (Tabs, getActions, tabId, changedProps, tab) => {
   let matched = false
+  const actions = getActions()
+
+  function add(action, actionable) {
+    const tabData = _makeTabData(tabId, tab, action, actionable)
+    matched = true
+    Tabs.addState(tabData)
+    chrome.pageAction.show(tabId)
+  }
 
   for (let i = 0, l = actions.length; i < l; i++) {
-    // TODO the hostname information should be normalized to lower case
-    // while keeping the uri case intact
-    if (actions[i].url == tab.url) {
-      // if we do not know about this tab, add it
-      if (!t) {
-        Tabs.add(tabId, tab.url, actions[i])
-        chrome.pageAction.show(tabId)
-      } else {
-        Tabs.update(tabId, tab.url, actions[i])
-      }
-      matched = true
+    if (_cmpUrl(tab.url, actions[i].url)) {
+      add(actions[i], false)
+      break;
+    }
+    if (_cmpUrl(tab.url, actions[i].actionUrl)) {
+      add(actions[i], true)
       break;
     }
   }
 
-  // if Tabs knows about this tabId, but no match, the URL and
-  // Tabs should no longer know about this tabId
-  if (t && !matched) {
+  if (Tabs._findIndexById(tabId) !== undefined && !matched) {
     Tabs.removeState(tabId)
   }
 }
@@ -121,11 +115,13 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports.sync = sync
   module.exports.pack = pack
   module.exports.onChange = onChange
+  module.exports._cmpUrl = _cmpUrl
+  module.exports._makeTabData = _makeTabData
   module.exports.chromeOnUpdated = chromeOnUpdated
   module.exports.chromeOnRemoved = chromeOnRemoved
 } else {
 // if not for testing, init things for chrome
-  const t = new TabState(onChange.bind(undefined, NativeConnect, NativeSend, actions))
-  chrome.tabs.onUpdated.addListener(chromeOnUpdated.bind(undefined, t))
+  const t = new TabState(onChange.bind(undefined, NativeConnect, NativeSend, getActions))
+  chrome.tabs.onUpdated.addListener(chromeOnUpdated.bind(undefined, t, getActions))
   chrome.tabs.onRemoved.addListener(chromeOnRemoved.bind(undefined, t))
 }

@@ -1,68 +1,74 @@
+/*
+  State is either changed through addState or removeState (input)
+
+  Any changes are handled by onChange (passed in on initiation) (output)
+ */
 class TabState {
-  constructor() {
-    this._tabs = []
-    this._subscribers = []
+  constructor(onChange) {
+    this.state = []
+    this._prevState = []
+    this.onChange = onChange || function() {}
   }
 
-  get(tabId) {
-    for (let i = 0, l = this._tabs.length; i < l; i++) {
-      const t = this._tabs[i]
-      if (t && t.id == tabId) {
-        return t
-      }
-    }
-    return undefined
-  }
-
-  _getIndex(tabId) {
-    for (let i = 0, l = this._tabs.length; i < l; i++) {
-      const t = this._tabs[i]
-      if (t && t.id == tabId) {
+  _findIndexById(id) {
+    for (let i = 0, l = this.state.length; i < l; i++) {
+      const t = this.state[i]
+      if (t && t.id == id) {
         return i
       }
     }
     return undefined
   }
 
-  set(tabId, data) {
-    const tid = this._getIndex(tabId)
-    if (tid === undefined) {
-      this._tabs.push(data)
+  addState(tabData) {
+    const idx = this._findIndexById(tabData.id)
+    this._willChangeState()
+
+    if (idx !== undefined) {
+      this.state[idx] = tabData
     } else {
-      this._tabs[tid] = data
+      this.state.push(tabData)
+    }
+
+    this._changedState()
+  }
+
+  removeState(tabId) {
+    const idx = this._findIndexById(tabId)
+    if (idx !== undefined) {
+      this._willChangeState()
+      this.state.splice(idx, 1)
+      this._changedState()
     }
   }
 
-  add(tabId, url, moduleData, file) {
-    this.update(tabId, url, moduleData, file)
+  _willChangeState() {
+    this._prevState = this.state.slice(0, this.state.length)
   }
 
-  update(tabId, url, moduleData, file) {
-    let data = moduleData
-    data.currentUrl = url
-    data.lastSync = null
-    data.file = file
-
-    this.set(tabId, data)
-    this.publish()
-  }
-
-  remove(tabId) {
-    const tid = this._getIndex(tabId)
-    if (tid !== undefined) {
-      this._tabs[tid] = null
+  _diffState() {
+    const k = 'file'
+    const fp = (state) => {
+      return state[k]
     }
-    this.publish()
+    const ps = this._prevState.filter(fp)
+    const cs = this.state.filter(fp)
+
+    function diff(a, b) {
+      return a.filter((aa) => {
+        return b.filter((bb) => {
+          return aa[k] === bb[k]
+        }).length === 0
+      }).length !== 0
+    }
+    return diff(ps, cs) || diff(cs, ps)
   }
 
-  subscribe(fn) {
-    this._subscribers.push(fn)
-  }
-
-  publish() {
-    this._subscribers.forEach((fn) => {
-      fn(this._tabs)
-    })
+  // call onChange if there's a difference
+  _changedState() {
+    if (this._diffState()) {
+      this.onChange(this.state)
+    }
   }
 }
 

@@ -34,14 +34,16 @@ function NativeConnect(responseHandler) {
 // processes incoming native messages
 // and syncs tabs that need the data
 //
-// r, w -> Tabs, actions, chrome
-const sync = (Tabs, actions, fileData) => {
+// r -> Tabs, actions, chrome
+const sync = (state, actions, fileData) => {
 
 }
 
 // creates a obj literal for JSON request to
 // native.
 // contains all file information
+//
+// r -> Tabs
 const pack = (state) => {
   const payload = { files: [] }
   state.forEach((tab, idx) => {
@@ -57,7 +59,7 @@ const pack = (state) => {
 // for incoming data
 //
 // native
-const broker = (Tabs, nConnect, nSend, actions, state) => {
+const onChange = (nConnect, nSend, actions, state) => {
   const payload = pack(state)
   if (payload.files.length == 0) {
     return
@@ -66,7 +68,7 @@ const broker = (Tabs, nConnect, nSend, actions, state) => {
   if (NativeRunning) {
     nSend(payload)
   } else {
-    nConnect(sync.bind(undefined, Tabs, actions))
+    nConnect(sync.bind(undefined, state, actions))
     nSend(payload)
   }
 }
@@ -77,7 +79,7 @@ const broker = (Tabs, nConnect, nSend, actions, state) => {
 // 4. generates a tab state object based on 2,3
 // 5. adds or updates tab state
 //
-// r,w -> Tabs, chrome, actions
+// w -> Tabs, chrome, actions
 const chromeOnUpdated = (Tabs, tabId, changedProps, tab) => {
   // see if this tabId is already known
   const t = Tabs.get(tabId)
@@ -102,13 +104,13 @@ const chromeOnUpdated = (Tabs, tabId, changedProps, tab) => {
   // if Tabs knows about this tabId, but no match, the URL and
   // Tabs should no longer know about this tabId
   if (t && !matched) {
-    Tabs.remove(tabId)
+    Tabs.removeState(tabId)
   }
 }
 
 // w -> Tabs, chrome
 const chromeOnRemoved = (Tabs, tabId) => {
-  Tabs.remove(tabId)
+  Tabs.removeState(tabId)
   // no longer need icon for chrome tabs removed
   chrome.pageAction.hide(tabId)
 }
@@ -118,13 +120,12 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports.NativeRunning = NativeRunning
   module.exports.sync = sync
   module.exports.pack = pack
-  module.exports.broker = broker
-  module.exports.onUpdated = chromeOnUpdated
+  module.exports.onChange = onChange
+  module.exports.chromeOnUpdated = chromeOnUpdated
   module.exports.chromeOnRemoved = chromeOnRemoved
 } else {
 // if not for testing, init things for chrome
-  const t = new TabState()
-  t.subscribe(broker.bind(undefined, t, NativeConnect, NativeSend, actions))
+  const t = new TabState(onChange.bind(undefined, NativeConnect, NativeSend, actions))
   chrome.tabs.onUpdated.addListener(chromeOnUpdated.bind(undefined, t))
   chrome.tabs.onRemoved.addListener(chromeOnRemoved.bind(undefined, t))
 }

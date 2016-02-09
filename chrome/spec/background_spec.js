@@ -1,5 +1,3 @@
-global.chrome = {}
-
 var TabState = require('../ext/tabState')
 var background = require('../ext/background')
 
@@ -9,6 +7,10 @@ describe('background', () => {
 
   beforeEach(() => {
     Tabs = new TabState()
+
+    global.chrome = {
+      pageAction: {}
+    }
   })
 
   describe('pack', () => {
@@ -23,7 +25,7 @@ describe('background', () => {
     })
   })
 
-  describe('broker', () => {
+  describe('onChange', () => {
     it('', () => {
 
     })
@@ -36,8 +38,18 @@ describe('background', () => {
   })
 
   describe('chromeOnRemoved', () => {
-    it('', () => {
-
+    it('calls removeState and hides chrome icon', (done) => {
+      var removeCalled = false
+      Tabs.removeState = (tabId) => {
+        expect(tabId).toEqual(5)
+        removeCalled = true
+      }
+      chrome.pageAction.hide = (tabId) => {
+        expect(tabId).toEqual(5)
+        expect(removeCalled).toBe(true)
+        done()
+      }
+      background.chromeOnRemoved(Tabs, 5)
     })
   })
 

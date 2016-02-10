@@ -73,31 +73,81 @@ describe('TabState', () => {
   })
 
   describe('_diffState', () => {
+    function createData(state, id, path, files) {
+      const r = {
+        id: id,
+        action: {
+          path: path,
+          actions: []
+        }
+      }
+
+      files.forEach((f) => {
+        r.action.actions.push({ file: f })
+      })
+      state.push(r)
+    }
+
+    function resetData(a, b) {
+      a = []
+      b = []
+    }
+
     it('diffs state and _prevState', () => {
       expect(Tabs._diffState()).toBe(false)
-      Tabs.state.push({id: 123, file: 'hî'})
+      createData(Tabs.state, 123, '/test/', ['hî'])
       expect(Tabs._diffState()).toBe(true)
 
       Tabs._prevState = Tabs.state.slice(0, Tabs.state.length)
       expect(Tabs._diffState()).toBe(false)
 
-      Tabs.state.push({id: 12, file: 'hî'})
+      createData(Tabs.state, 12, '/test/', ['hî'])
       expect(Tabs._diffState()).toBe(false)
 
-      Tabs.state.push({id: 1, file: 'hî2'})
+      createData(Tabs.state, 1, '/test/', ['hî2'])
       expect(Tabs._diffState()).toBe(true)
 
-      Tabs.state.push({id: 1, file: 'hî22'})
+      createData(Tabs.state, 1, '/test/', ['hî22'])
       expect(Tabs._diffState()).toBe(true)
 
       Tabs._prevState = Tabs.state.slice(0, Tabs.state.length)
       expect(Tabs._diffState()).toBe(false)
 
-      Tabs._prevState.push({id: 1, file: 'hi22'})
+      createData(Tabs._prevState, 1, '/test/', ['hi22'])
       expect(Tabs._diffState()).toBe(true)
 
-      Tabs.state.push({id: 1, file: 'hi22'})
+      createData(Tabs.state, 1, '/test/', ['hi22'])
       expect(Tabs._diffState()).toBe(false)
+    })
+
+    it('treats filepaths as part of filename', () => {
+      createData(Tabs.state, 1, '/path1/', ['test'])
+      createData(Tabs._prevState, 1, '/path1/', ['test'])
+      expect(Tabs._diffState()).toBe(false)
+      createData(Tabs.state, 1, '/path1/', ['test'])
+      createData(Tabs._prevState, 1, '/path2/', ['test'])
+      expect(Tabs._diffState()).toBe(true)
+    })
+
+    it('able to process multiple files', () => {
+      createData(Tabs.state, 1, '/path1/', ['test', 'test1', 'blah'])
+      createData(Tabs._prevState, 1, '/path1/', ['test', 'test1', 'blah'])
+      expect(Tabs._diffState()).toBe(false)
+      createData(Tabs.state, 2, '/path2/', ['test', 'test1', 'blah'])
+      createData(Tabs._prevState, 2, '/path1/', ['test', 'test1', 'blah'])
+      expect(Tabs._diffState()).toBe(true)
+      resetData(Tabs.state, Tabs._prevState)
+
+      expect(Tabs._diffState()).toBe(false)
+      createData(Tabs.state, 2, '/path1/', ['test', 'test2', 'blah'])
+      createData(Tabs._prevState, 2, '/path1/', ['test', 'test1', 'blah'])
+      expect(Tabs._diffState()).toBe(true)
+      resetData(Tabs.state, Tabs._prevState)
+
+      expect(Tabs._diffState()).toBe(false)
+      createData(Tabs.state, 2, '/path1/', ['test', 'blah'])
+      createData(Tabs._prevState, 2, '/path1/', ['test', 'test1', 'blah'])
+      expect(Tabs._diffState()).toBe(true)
     })
   })
 

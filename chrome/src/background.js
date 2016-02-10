@@ -10,19 +10,38 @@ function NativeConnect(responseHandler) {
   port.onMessage.addListener(responseHandler)
 }
 
-// processes incoming native messages
-// and syncs tabs that need the data
-//
-// r -> Tabs, actions, chrome
-const sync = (state, actions, fileData) => {
-  //chrome.tabs.sendMessage(id, { type: 'edit', actions: action.actions, text: 'hihihihi!'})
+/**
+ * native incoming message handler
+ * for handling file data
+ * message is JSON { file: string, data: string}
+ *
+ * sends each `message` to the corresponding tab
+ *
+ * @param  Object state    current TabState
+ * @param  Object connData object JSON of incoming message
+ *
+ * Access: r TabState, native
+ */
+const sync = (state, connData) => {
+  state.forEach((tabData) => {
+    const path = tabData.action.path
+    tabData.action.actions.forEach((a) => {
+      if (path + a.file === connData.file) {
+        chrome.tabs.sendMessage(tabData.id, { type: 'edit', selector: a.actionElementEdit, text: connData.data})
+      }
+    })
+  })
 }
 
-// creates a obj literal for JSON request to
-// native.
-// contains all file information
-//
-// r -> Tabs
+/**
+ * Goes over a TabState figuring out what files
+ * will be needed (for native)
+ * Outputs JSON { files: [] }
+ * @param  Object state current TabState
+ * @return Object       JSON object to be sent to native
+ *
+ * Access: r TabState
+ */
 const pack = (state) => {
   const payload = { files: [] }
   state.forEach((tab, idx) => {
@@ -47,7 +66,7 @@ const onChange = (nConnect, nSend, getActions, state) => {
   if (NativeRunning) {
     nSend(payload)
   } else {
-    nConnect(sync.bind(undefined, state, getActions))
+    nConnect(sync.bind(undefined, state))
     nSend(payload)
   }
 }

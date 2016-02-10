@@ -24,10 +24,9 @@ function NativeConnect(responseHandler) {
  *
  * Access: r TabState, native
  */
-const sync = (state, msg) => {
-  console.log('sync -> ', JSON.stringify(msg)) // FIXME
+const sync = (state, msg, a) => {
   state.forEach((tabData) => {
-    const path = tabData.action.path
+    const path = tabData.action.filePath
     tabData.action.actions.forEach((a) => {
       if (path + a.file === msg.file) {
         chrome.tabs.sendMessage(tabData.id, { type: 'edit', selector: a.actionElementEdit, text: msg.data})

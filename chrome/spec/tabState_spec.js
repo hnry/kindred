@@ -88,9 +88,9 @@ describe('TabState', () => {
       state.push(r)
     }
 
-    function resetData(a, b) {
-      a = []
-      b = []
+    function resetData(t) {
+      t.state = []
+      t._prevState = []
     }
 
     it('diffs state and _prevState', () => {
@@ -136,13 +136,13 @@ describe('TabState', () => {
       createData(Tabs.state, 2, '/path2/', ['test', 'test1', 'blah'])
       createData(Tabs._prevState, 2, '/path1/', ['test', 'test1', 'blah'])
       expect(Tabs._diffState()).toBe(true)
-      resetData(Tabs.state, Tabs._prevState)
+      resetData(Tabs)
 
       expect(Tabs._diffState()).toBe(false)
       createData(Tabs.state, 2, '/path1/', ['test', 'test2', 'blah'])
       createData(Tabs._prevState, 2, '/path1/', ['test', 'test1', 'blah'])
       expect(Tabs._diffState()).toBe(true)
-      resetData(Tabs.state, Tabs._prevState)
+      resetData(Tabs)
 
       expect(Tabs._diffState()).toBe(false)
       createData(Tabs.state, 2, '/path1/', ['test', 'blah'])

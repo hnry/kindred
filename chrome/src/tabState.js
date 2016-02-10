@@ -47,17 +47,24 @@ class TabState {
   }
 
   _diffState() {
-    const k = 'file'
-    const fp = (state) => {
-      return state[k]
+    const fp = (prev, state) => {
+      const path = state.action && state.action.path || ''
+      if (!path) {
+          return prev
+      }
+      const f = state.action.actions.map((a) => {
+        return path + a.file
+      })
+      return prev.concat(f)
     }
-    const ps = this._prevState.filter(fp)
-    const cs = this.state.filter(fp)
+
+    const ps = this._prevState.reduce(fp, [])
+    const cs = this.state.reduce(fp, [])
 
     function diff(a, b) {
       return a.filter((aa) => {
         return b.filter((bb) => {
-          return aa[k] === bb[k]
+          return aa === bb
         }).length === 0
       }).length !== 0
     }

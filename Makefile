@@ -25,9 +25,9 @@ test_js:
 	@node_modules/.bin/jasmine JASMINE_CONFIG_PATH=chrome/spec/support/jasmine.json
 	@echo "\n"
 
-test_native: build_native
+test_native:
 	@echo "\n$(COLOR)Running Native tests...$(COLOR_RESET)"
-	@go test ./...
+	@go test -race ./...
 	@echo "\n"
 
 .PHONY: default build test watch test_js test_native build_js build_native

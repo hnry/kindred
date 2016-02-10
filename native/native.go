@@ -3,27 +3,101 @@ package main
 import (
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
+	"io/ioutil"
 	"log"
-	"net"
 	"os"
-	"strings"
 	"time"
 )
 
-var permissions []*permission
-
-type permission struct {
-	Client     string    // client name
-	Time       time.Time // timestamp of permission request
-	Conn       net.Conn
-	Permission bool // whether the client has permission
+type outputJSON struct {
+	File string `json:"file"`
+	Data []byte `json:"data"`
 }
 
-type permissionResult struct {
-	Client     string
-	Permission bool
+type fileList struct {
+	Files []*fileInfo
+}
+
+func (fl *fileList) Update(files []string) {
+	var newFiles []*fileInfo
+	for _, f := range files {
+		file := fileInfo{File: f}
+		// TODO check if file is already known
+		// copy over ReadModTime if so
+		// this is to optimize 1 less read per file
+		newFiles = append(newFiles, &file)
+	}
+
+	fl.Files = newFiles
+}
+
+func (fl *fileList) ReadAll() {
+	for _, f := range fl.Files {
+		// if a file had an error previously, do not try to read again
+		// this is not permanent, as Update() will clear the error
+		if f.Error != nil {
+			continue
+		}
+
+		fdata, err := f.Read()
+		if err != nil {
+			continue
+			// TODO should do something with errors, like sending it back to chrome
+		}
+
+		out := outputJSON{File: f.File, Data: fdata}
+		outj, err := json.Marshal(out)
+		if err != nil {
+			log.Fatal(err)
+		}
+		output(os.Stdout, outj)
+	}
+}
+
+type fileInfo struct {
+	File        string
+	ReadModTime time.Time
+	Error       error
+}
+
+// wrap _Read() to let all possible errors bubble up
+// to easier set fileInfo.Error
+func (f *fileInfo) Read() ([]byte, error) {
+	data, err := f._Read()
+	if err != nil {
+		f.Error = err
+	}
+	return data, err
+}
+
+// TODO be able to detect minor file path errors
+// e.g. file path might be /path/filename.txt but no file exists
+// should then test maybe the path is actually /path/filename/filename.txt
+func (f *fileInfo) _Read() ([]byte, error) {
+	file, err := os.Open(f.File)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	if fileInfo.ModTime() == f.ReadModTime {
+		return nil, nil
+	}
+
+	if fileInfo.Size() > 999950 { // 50 bytes off
+		return nil, errors.New("File will probably exceed 1MB limit")
+	}
+
+	f.ReadModTime = fileInfo.ModTime()
+
+	return ioutil.ReadAll(file)
 }
 
 /**
@@ -68,95 +142,28 @@ func output(w io.Writer, msg []byte) {
 	w.Write(msg)
 }
 
-func authorizeClient(client string, access bool) {
-	// TODO have to check if this authorization is stale
-	// if permission.Time is older than 5mins then reject automatically
-	// should communicate this to chrome extension in the original request
-
-	for _, perm := range permissions {
-		if perm.Client == client {
-			if access {
-				perm.Permission = true
-				go connHandler(perm.Conn)
-			} else {
-				perm.Conn.Close()
-				// TODO should send a reject response back to client
-				// so it doesn't keep trying to reconnect?
-				// really depends on how permanent these permissions are
-				perm.Permission = false
-			}
-		}
-	}
-}
-
-/**
- * Continously reads from conn and relays it to chrome extension
- * Only should be called after authorizeClient()
- * @param	net.Conn	conn	initial connection from client (editor)
- */
-func connHandler(conn net.Conn) {
-	for {
-		msgSize, msg := input(conn)
-		if msgSize != 0 {
-			output(os.Stdout, msg)
-		}
-	}
-}
-
-/**
- * Connection negotiation for client (editor)
- * Expects first message from client to be it's client name
- * Then sends a request to chrome extension asking if allow/deny this client
- * @param  net.Conn conn
- */
-func connNegotiate(conn net.Conn) {
-	//conn.SetReadDeadline(time.Now()) TODO
-	msgSize, msg := input(conn)
-	if msgSize == 0 {
-		conn.Close() // TODO send back error msg to client?
-	} else {
-		// ask chrome extension for permissions for this client
-		client := string(msg)
-		msg := fmt.Sprintf("{\"permission\": \"%s\"}", strings.TrimSpace(client))
-		output(os.Stdout, []byte(msg))
-		// TODO check client name unique, otherwise reject
-		permissions = append(permissions, &permission{Client: client, Time: time.Now(), Conn: conn})
-	}
-}
-
 /**
  * Continously reads from Stdin for data from chrome extension
- * The only data ever sent from chrome extension is accept/reject information
- * For clients (editor)
+ * Incoming messages are JSON { files: []string }
  */
-func incomingChrome() {
+func readStdin(fList *fileList) {
 	for {
-		_, incomingMsg := input(os.Stdin)
-		if incomingMsg != nil {
-			permResult := new(permissionResult)
-			json.Unmarshal(incomingMsg, &permResult)
-			// if authorization allow/deny
-			// else... nothing, editor/client does not take back data
-			if permResult.Permission {
-				authorizeClient(permResult.Client, permResult.Permission)
-			}
+		_, msg := input(os.Stdin)
+		if msg != nil {
+			var files map[string][]string
+			json.Unmarshal(msg, files)
+			fList.Update(files["files"])
 		}
 	}
 }
 
 func main() {
-	go incomingChrome()
+	fList := &fileList{}
 
-	server, err := net.Listen("tcp", ":5092")
-	if err != nil {
-		log.Fatal(err)
-	}
+	go readStdin(fList)
 
 	for {
-		conn, err := server.Accept()
-		if err != nil {
-			// handle error TODO
-		}
-		go connNegotiate(conn)
+		fList.ReadAll()
+		time.Sleep(50 * time.Millisecond)
 	}
 }

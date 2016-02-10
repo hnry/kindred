@@ -11,9 +11,13 @@ import (
 	"time"
 )
 
+func debug(v ...interface{}) {
+	log.Println("pid:", os.Getpid(), v)
+}
+
 type outputJSON struct {
 	File string `json:"file"`
-	Data []byte `json:"data"`
+	Data string `json:"data"`
 }
 
 type fileList struct {
@@ -21,6 +25,7 @@ type fileList struct {
 }
 
 func (fl *fileList) Update(files []string) {
+	debug("Updating with...", files)
 	var newFiles []*fileInfo
 	for _, f := range files {
 		file := fileInfo{File: f}
@@ -43,14 +48,22 @@ func (fl *fileList) ReadAll() {
 
 		fdata, err := f.Read()
 		if err != nil {
+			debug("File:", f.File)
+			debug("fileInfo#Read error:", err)
 			continue
 			// TODO should do something with errors, like sending it back to chrome
 		}
 
-		out := outputJSON{File: f.File, Data: fdata}
+		if fdata == nil {
+			continue
+		}
+
+		debug("Read:", f.File, "; Got", len(fdata), "bytes")
+
+		out := outputJSON{File: f.File, Data: string(fdata)}
 		outj, err := json.Marshal(out)
 		if err != nil {
-			log.Fatal(err)
+			debug(err)
 		}
 		output(os.Stdout, outj)
 	}
@@ -87,7 +100,8 @@ func (f *fileInfo) _Read() ([]byte, error) {
 		return nil, err
 	}
 
-	if fileInfo.ModTime() == f.ReadModTime {
+	fmod := fileInfo.ModTime()
+	if fmod == f.ReadModTime {
 		return nil, nil
 	}
 
@@ -95,9 +109,10 @@ func (f *fileInfo) _Read() ([]byte, error) {
 		return nil, errors.New("File will probably exceed 1MB limit")
 	}
 
-	f.ReadModTime = fileInfo.ModTime()
+	f.ReadModTime = fmod
 
-	return ioutil.ReadAll(file)
+	data, err := ioutil.ReadAll(file)
+	return data, err
 }
 
 /**
@@ -113,7 +128,11 @@ func input(r io.Reader) (int, []byte) {
 	l := make([]byte, 4)
 	rlen, err := r.Read(l)
 	if err != nil {
-		log.Println(err)
+		if err.Error() != "EOF" && rlen != 0 {
+			debug("Read data length input error:", err)
+			debug("Read", rlen, "bytes")
+		}
+		return 0, nil
 	}
 
 	if rlen == 4 {
@@ -121,13 +140,13 @@ func input(r io.Reader) (int, []byte) {
 		msgBytes := make([]byte, msgSize)
 		rlen, err = r.Read(msgBytes)
 		if err != nil {
-			log.Println(err)
+			debug("Reading data from input error:", err)
 		}
 
 		if rlen == int(msgSize) {
 			return rlen, msgBytes
 		}
-		log.Println("Read bytes returned mismatch, expecting:", msgSize, ", but got", rlen)
+		debug("Read bytes returned mismatch, expecting:", msgSize, ", but got", rlen)
 	}
 	return 0, nil
 }
@@ -138,8 +157,18 @@ func input(r io.Reader) (int, []byte) {
  * @param  []byte msg
  */
 func output(w io.Writer, msg []byte) {
-	binary.Write(w, binary.LittleEndian, uint32(len(msg)))
-	w.Write(msg)
+	err := binary.Write(w, binary.LittleEndian, uint32(len(msg)))
+	if err != nil {
+		debug("failed to write data length:", err)
+		return
+	}
+	l, err := w.Write(msg)
+	if l != len(msg) {
+		debug("mismatch writing, wrote:", l, " but expecting:", len(msg))
+	}
+	if err != nil {
+		debug("Write error:", err)
+	}
 }
 
 /**
@@ -150,20 +179,25 @@ func readStdin(fList *fileList) {
 	for {
 		_, msg := input(os.Stdin)
 		if msg != nil {
-			var files map[string][]string
-			json.Unmarshal(msg, files)
+			files := make(map[string][]string)
+			err := json.Unmarshal(msg, &files)
+			if err != nil {
+				debug(err)
+			}
 			fList.Update(files["files"])
 		}
 	}
 }
 
 func main() {
+	debug("kindred native started.")
+
 	fList := &fileList{}
 
 	go readStdin(fList)
 
 	for {
 		fList.ReadAll()
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(200 * time.Millisecond)
 	}
 }

@@ -6,7 +6,7 @@ function createData(state, id, path, files) {
   const r = {
     id: id,
     action: {
-      path: path,
+      filePath: path,
       actions: []
     }
   }

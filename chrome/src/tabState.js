@@ -71,7 +71,7 @@ class TabState {
     st = st || this.state
 
     return st.reduce((files, tab) => {
-      const path = tab.action && tab.action.path || ''
+      const path = tab.action && tab.action.filePath || ''
 
       if (!path) {
           return files

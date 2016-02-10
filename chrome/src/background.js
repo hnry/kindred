@@ -1,12 +1,14 @@
-const NativeRunning = false
-const NativeHostname = 'com.kindred_edit.nmh'
+var NativeRunning = false
+const NativeHostname = 'com.kindred_edit.native'
+var port
 
 function NativeSend(msg) {
-  chrome.runtime.sendNativeMessage(NativeHostname, msg)
+  //chrome.runtime.sendNativeMessage(NativeHostname, msg)
+  port.postMessage(msg)
 }
 
 function NativeConnect(responseHandler) {
-  const port = chrome.runtime.connectNative(NativeHostname)
+  port = chrome.runtime.connectNative(NativeHostname)
   port.onMessage.addListener(responseHandler)
 }
 
@@ -18,16 +20,17 @@ function NativeConnect(responseHandler) {
  * sends each `message` to the corresponding tab
  *
  * @param  Object state    current TabState
- * @param  Object connData object JSON of incoming message
+ * @param  Object msg object JSON of incoming message
  *
  * Access: r TabState, native
  */
-const sync = (state, connData) => {
+const sync = (state, msg) => {
+  console.log('sync -> ', JSON.stringify(msg)) // FIXME
   state.forEach((tabData) => {
     const path = tabData.action.path
     tabData.action.actions.forEach((a) => {
-      if (path + a.file === connData.file) {
-        chrome.tabs.sendMessage(tabData.id, { type: 'edit', selector: a.actionElementEdit, text: connData.data})
+      if (path + a.file === msg.file) {
+        chrome.tabs.sendMessage(tabData.id, { type: 'edit', selector: a.actionElementEdit, text: msg.data})
       }
     })
   })
@@ -41,17 +44,19 @@ const sync = (state, connData) => {
 const onChange = (nConnect, nSend, getActions, Tabs, state) => {
   const payload = { files: Tabs.renderFiles() }
   if (payload.files.length === 0) {
-    // this would be a bug with TabState#_diffState
-    // should never happen
-    throw('onChange called but no files')
+    if (NativeRunning) {
+      port.disconnect() // exits native
+      port = null
+      NativeRunning = false
+    }
+    return
   }
 
-  if (NativeRunning) {
-    nSend(payload)
-  } else {
+  if (!NativeRunning) {
+    NativeRunning = true
     nConnect(sync.bind(undefined, state))
-    nSend(payload)
   }
+  nSend(payload)
 }
 
 function _cmpUrl(url, aUrl) {
@@ -64,14 +69,15 @@ function _makeTabData(id, tab, action, actionable, callback) {
     id: id,
     url: tab.url,
     action: {
+
       name: action.name,
       actions: []
     }
   }
 
   // TODO should show warning if no fileDir, must be set in settings
-  if (actionable && action.fileDir) {
-    t.action.path = action.fileDir
+  if (actionable && action.filePath) {
+    t.action.filePath = action.filePath
 
     chrome.tabs.executeScript(id, {file: 'jquery.js'}, () => {
       chrome.tabs.executeScript(id, {file: 'action.js'}, () => {
@@ -93,6 +99,12 @@ function _makeTabData(id, tab, action, actionable, callback) {
 
 function getActions(callback) {
   let a = defaultActions || []
+
+  // FIXME something quick to test with while this func is a work in progress
+  a.forEach((action) => {
+    action.filePath = '/Users/h/'
+  })
+
   chrome.storage.sync.get('actions', (actions) => {
     callback(a)
   })

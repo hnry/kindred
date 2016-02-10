@@ -53,7 +53,7 @@ describe('background', () => {
         callback(testData.testNames)
       })
       if (fileDir) {
-        testData.action.fileDir = fileDir
+        testData.action.filePath = fileDir
       }
       const cb = (t) => {
         expect(t).toEqual(expectT)
@@ -87,7 +87,7 @@ describe('background', () => {
         url: 'http://test.com/hï',
         action: {
           name: 'Test action 2',
-          path: '/test/path/',
+          filePath: '/test/path/',
           actions: [
             { file: 'example-testNamé.js', actionElementEdit: '.blah p'}
           ]
@@ -110,7 +110,7 @@ describe('background', () => {
         url: 'http://test.com/#hï',
         action: {
           name: 'Test actiön 3',
-          path: '/test/path/',
+          filePath: '/test/path/',
           actions: [
             { file: 'tèst-testNamé.js', actionElementEdit: '.test-t a p' },
             { file: 'tèst-testcssName.css', actionElementEdit: '.test-t a b' },

@@ -1,0 +1,9 @@
+{
+  "name": "com.kindred_edit.native",
+  "description": "kindred edit",
+  "path": "/Users/h/go_code/kindred_edit/native/native",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://cboniphmohhlmbacpgcobnmgmcgkdlfk/"
+  ]
+}

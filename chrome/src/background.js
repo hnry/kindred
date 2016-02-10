@@ -33,34 +33,17 @@ const sync = (state, connData) => {
   })
 }
 
-/**
- * Goes over a TabState figuring out what files
- * will be needed (for native)
- * Outputs JSON { files: [] }
- * @param  Object state current TabState
- * @return Object       JSON object to be sent to native
- *
- * Access: r TabState
- */
-const pack = (state) => {
-  const payload = { files: [] }
-  state.forEach((tab, idx) => {
-    if (tab && tab.file) {
-      payload.files.push(tab.file)
-    }
-  })
-  return payload
-}
-
 // brokers a bunch of stuff (sets up dependencies)
 // packs() outgoing data then sets up sync()
 // for incoming data
 //
-// native
-const onChange = (nConnect, nSend, getActions, state) => {
-  const payload = pack(state)
-  if (payload.files.length == 0) {
-    return
+//  * Access: r TabState, native
+const onChange = (nConnect, nSend, getActions, Tabs, state) => {
+  const payload = { files: Tabs.renderFiles() }
+  if (payload.files.length === 0) {
+    // this would be a bug with TabState#_diffState
+    // should never happen
+    throw('onChange called but no files')
   }
 
   if (NativeRunning) {
@@ -165,7 +148,6 @@ const chromeOnRemoved = (Tabs, tabId) => {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports.NativeRunning = NativeRunning
   module.exports.sync = sync
-  module.exports.pack = pack
   module.exports.onChange = onChange
   module.exports._cmpUrl = _cmpUrl
   module.exports._makeTabData = _makeTabData

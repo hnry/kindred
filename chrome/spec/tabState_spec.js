@@ -2,6 +2,20 @@ global.chrome = {}
 
 var TabState = require('../ext/tabState')
 
+function createData(state, id, path, files) {
+  const r = {
+    id: id,
+    action: {
+      path: path,
+      actions: []
+    }
+  }
+  files.forEach((f) => {
+    r.action.actions.push({ file: f })
+  })
+  state.push(r)
+}
+
 describe('TabState', () => {
 
   var Tabs
@@ -73,21 +87,6 @@ describe('TabState', () => {
   })
 
   describe('_diffState', () => {
-    function createData(state, id, path, files) {
-      const r = {
-        id: id,
-        action: {
-          path: path,
-          actions: []
-        }
-      }
-
-      files.forEach((f) => {
-        r.action.actions.push({ file: f })
-      })
-      state.push(r)
-    }
-
     function resetData(t) {
       t.state = []
       t._prevState = []
@@ -170,6 +169,32 @@ describe('TabState', () => {
         throw('should not be called')
       }
       Tabs._changedState()
+    })
+  })
+
+  describe('renderFiles', () => {
+    it('outputs all files needed', () => {
+      createData(Tabs.state, 2, '/test1/', ['a', 'b', 'c'])
+      createData(Tabs.state, 2, '/test2/path/', ['a-1.txt', 'ôáà.js', 'cś.css'])
+      expect(Tabs.renderFiles()).toEqual([
+        '/test1/a',
+        '/test1/b',
+        '/test1/c',
+        '/test2/path/a-1.txt',
+        '/test2/path/ôáà.js',
+        '/test2/path/cś.css'
+      ])
+    })
+
+    it('ensures unique files', () => {
+      createData(Tabs.state, 2, '/test1/', ['a', 'b', 'c'])
+      createData(Tabs.state, 1, '/test1/', ['a', 'b', 'c', 'd'])
+      expect(Tabs.renderFiles()).toEqual([
+        '/test1/a',
+        '/test1/b',
+        '/test1/c',
+        '/test1/d',
+      ])
     })
   })
 

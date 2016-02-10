@@ -47,19 +47,8 @@ class TabState {
   }
 
   _diffState() {
-    const fp = (prev, state) => {
-      const path = state.action && state.action.path || ''
-      if (!path) {
-          return prev
-      }
-      const f = state.action.actions.map((a) => {
-        return path + a.file
-      })
-      return prev.concat(f)
-    }
-
-    const ps = this._prevState.reduce(fp, [])
-    const cs = this.state.reduce(fp, [])
+    const ps = this.renderFiles(this._prevState)
+    const cs = this.renderFiles(this.state)
 
     function diff(a, b) {
       return a.filter((aa) => {
@@ -74,8 +63,33 @@ class TabState {
   // call onChange if there's a difference
   _changedState() {
     if (this._diffState()) {
-      this.onChange(this.state)
+      this.onChange(this, this.state)
     }
+  }
+
+  renderFiles(st) {
+    st = st || this.state
+
+    return st.reduce((files, tab) => {
+      const path = tab.action && tab.action.path || ''
+
+      if (!path) {
+          return files
+      }
+
+      const f = tab.action.actions.reduce((newF, a) => {
+        const fp = path + a.file
+
+        // ensure unique
+        if (newF.indexOf(fp) === -1 && files.indexOf(fp) === -1) {
+          newF.push(fp)
+        }
+
+        return newF
+      }, [])
+
+      return files.concat(f)
+    }, [])
   }
 }
 

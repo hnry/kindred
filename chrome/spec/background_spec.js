@@ -128,12 +128,6 @@ describe('background', () => {
     })
   })
 
-  describe('pack', () => {
-    it('', () => {
-      pending()
-    })
-  })
-
   describe('sync', () => {
     it('', () => {
       pending()

@@ -17,6 +17,10 @@ describe('background', () => {
       pageAction: {
         show: () => {},
         hide: () => {}
+      },
+      tabs: {
+        executeScript: (i, f, cb) => { cb() },
+        sendMessage: (i, o, cb) => { cb() }
       }
     }
   })
@@ -28,8 +32,99 @@ describe('background', () => {
   })
 
   describe('_makeTabData', () => {
-    it('', () => {
-      pending()
+    it('non-actionable tab data', (done) => {
+      const cb = (t) => {
+        expect(t).toEqual({
+          id: 200,
+          url: 'http://test.com/hï',
+          action: {
+            name: 'Test action',
+            actions: []
+          }
+        })
+        done()
+      }
+
+      background._makeTabData(200, { url: 'http://test.com/hï' }, testActions[0], false, cb)
+    })
+
+    function testActionable(testData, fileDir, expectT, done) {
+      chrome.tabs.sendMessage = ((i, o, callback) => {
+        callback(testData.testNames)
+      })
+      if (fileDir) {
+        testData.action.fileDir = fileDir
+      }
+      const cb = (t) => {
+        expect(t).toEqual(expectT)
+        done()
+      }
+      background._makeTabData(testData.id, { url: testData.url }, testData.action, true, cb)
+    }
+
+    it('skips actionable if no fileDir', (done) => {
+      const t = {
+        id: 200,
+        url: 'http://test.com/hï',
+        action: {
+          name: 'Test action 2',
+          actions: []
+        }
+      }
+
+      const testData = {
+        id: 200,
+        url: 'http://test.com/hï',
+        testNames: ['testNamé'],
+        action: testActions[1]
+      }
+      testActionable(testData, '', t, done)
+    })
+
+    it('actionable tab data', (done) => {
+      const t = {
+        id: 210,
+        url: 'http://test.com/hï',
+        action: {
+          name: 'Test action 2',
+          path: '/test/path/',
+          actions: [
+            { file: 'example-testNamé.js', actionElementEdit: '.blah p'}
+          ]
+        }
+      }
+      const testData = {
+        id: 210,
+        url: 'http://test.com/hï',
+        testNames: ['testNamé'],
+        action: testActions[1]
+      }
+      testActionable(testData, '/test/path/', t, done)
+    })
+
+    it('ignores invalid names & waits for valid name')
+
+    it('multiple actionable tab data', (done) => {
+      const t = {
+        id: 210,
+        url: 'http://test.com/#hï',
+        action: {
+          name: 'Test actiön 3',
+          path: '/test/path/',
+          actions: [
+            { file: 'tèst-testNamé.js', actionElementEdit: '.test-t a p' },
+            { file: 'tèst-testcssName.css', actionElementEdit: '.test-t a b' },
+            { file: 'htmltestHTML.html', actionElementEdit: '.test-t a t' }
+          ]
+        }
+      }
+      const testData = {
+        id: 210,
+        url: 'http://test.com/#hï',
+        testNames: ['testNamé', 'testcssName', 'testHTML'],
+        action: testActions[2]
+      }
+      testActionable(testData, '/test/path/', t, done)
     })
   })
 
@@ -69,7 +164,7 @@ describe('background', () => {
       background.chromeOnUpdated(Tabs, getTestActions, 700, { status: 'complete' }, { url: testActions[0].url })
     })
 
-    it('matches action url, and figures out file path', () => {
+    it('supports regex urls', () => {
       pending()
     })
   })

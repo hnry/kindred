@@ -5,7 +5,7 @@ var defaultActions = [
     actionUrl: 'https://facebook.github.io/react/',
     actions: [
       {
-        actionElementEdit: '#markdownExample textarea',
+        actionElementEdit: '#markdownExample .MarkdownEditor textarea',
         actionElementName: '#markdownExample h3',
         actionInvalidNames: [],
         namePrefix: '',

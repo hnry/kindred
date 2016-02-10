@@ -11,7 +11,7 @@ build_native:
 build_js:
 	@echo "transpiling chrome extension src..."
 	node_modules/.bin/babel --no-comments --minified chrome/src -d chrome/ext
-	cp node_modules/sizzle/dist/sizzle.min.js chrome/ext/sizzle.js
+	cp node_modules/jquery/dist/jquery.min.js chrome/ext/jquery.js
 
 watch:
 	@echo "auto-building chrome extension src..."

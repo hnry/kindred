@@ -15,7 +15,7 @@ function NativeConnect(responseHandler) {
 //
 // r -> Tabs, actions, chrome
 const sync = (state, actions, fileData) => {
-
+  //chrome.tabs.sendMessage(id, { type: 'edit', actions: action.actions, text: 'hihihihi!'})
 }
 
 // creates a obj literal for JSON request to
@@ -56,26 +56,37 @@ function _cmpUrl(url, aUrl) {
   return url === aUrl
 }
 
-function _makeTabData(id, tab, action, actionable) {
-  let t = {
+function _makeTabData(id, tab, action, actionable, callback) {
+  // TODO support invalid actionElementName & waiting for valid names
+  const t = {
     id: id,
-    url: tab.url
+    url: tab.url,
+    action: {
+      name: action.name,
+      actions: []
+    }
   }
 
-  if (actionable) {
-    chrome.tabs.executeScript(id, {file: 'sizzle.js'}, () => {
-      chrome.tabs.executeScript(id, {file: 'actionName.js'}, () => {
-        chrome.tabs.executeScript(id, {code: 'kindredActions('+JSON.stringify(action.actions)+')'})
+  // TODO should show warning if no fileDir, must be set in settings
+  if (actionable && action.fileDir) {
+    t.action.path = action.fileDir
+
+    chrome.tabs.executeScript(id, {file: 'jquery.js'}, () => {
+      chrome.tabs.executeScript(id, {file: 'action.js'}, () => {
+        chrome.tabs.sendMessage(id, { type: 'name', actions: action.actions }, (response) => {
+          t.action.actions = action.actions.map((a, idx) => {
+            return {
+              file: a.namePrefix + response[idx] + a.nameSuffix,
+              actionElementEdit: a.actionElementEdit
+            }
+          })
+          callback(t)
+        })
       })
     })
+  } else {
+    callback(t)
   }
-
-  return t
-}
-
-// sender = { id, url, tab{} }
-function _getActionName(req, sender, reply) {
-
 }
 
 function getActions(callback) {
@@ -99,10 +110,12 @@ const chromeOnUpdated = (Tabs, getActions, tabId, changedProps, tab) => {
   let matched = false
 
   function add(action, actionable) {
-    const tabData = _makeTabData(tabId, tab, action, actionable)
     matched = true
-    Tabs.addState(tabData)
-    chrome.pageAction.show(tabId)
+
+    _makeTabData(tabId, tab, action, actionable, (tabData) => {
+      Tabs.addState(tabData)
+      chrome.pageAction.show(tabId)
+    })
   }
 
   getActions((actions) => {
@@ -144,5 +157,4 @@ if (typeof module !== 'undefined' && module.exports) {
   const t = new TabState(onChange.bind(undefined, NativeConnect, NativeSend, getActions))
   chrome.tabs.onUpdated.addListener(chromeOnUpdated.bind(undefined, t, getActions))
   chrome.tabs.onRemoved.addListener(chromeOnRemoved.bind(undefined, t))
-  chrome.runtime.onMessage.addListener(_getActionName)
 }

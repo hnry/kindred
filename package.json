@@ -4,7 +4,7 @@
   "description": "(chrome extension) use your editor instead of a web editor",
   "main": "index.js",
   "dependencies": {
-    "sizzle": "^2.3.0"
+    "jquery": "^2.2.0"
   },
   "devDependencies": {
     "babel-cli": "^6.4.5",

@@ -64,16 +64,30 @@ const onChange = (native, Tabs, state) => {
 }
 
 function _cmpUrl(url, aUrl) {
-  return url === aUrl
+  const r = new RegExp(aUrl)
+  return r.test(url)
 }
 
-function _makeTabData(id, tab, action, actionable, callback) {
-  // TODO support invalid actionElementName & waiting for valid names
+// Access: w TabState, chrome
+function addTab(Tabs, tab, actions, actionNames) {
+  if (actionNames) {
+    tab.action.actions = actions.map((a, idx) => {
+      return {
+        file: a.namePrefix + actionNames[idx] + a.nameSuffix,
+        actionElementEdit: a.actionElementEdit
+      }
+    })
+  }
+
+  Tabs.addState(tab)
+  chrome.pageAction.show(tab.id)
+}
+
+function _makeTabData(Tabs, id, tab, action, actionable) {
   const t = {
     id: id,
     url: tab.url,
     action: {
-
       name: action.name,
       actions: []
     }
@@ -85,19 +99,11 @@ function _makeTabData(id, tab, action, actionable, callback) {
 
     chrome.tabs.executeScript(id, {file: 'jquery.js'}, () => {
       chrome.tabs.executeScript(id, {file: 'action.js'}, () => {
-        chrome.tabs.sendMessage(id, { type: 'name', actions: action.actions }, (response) => {
-          t.action.actions = action.actions.map((a, idx) => {
-            return {
-              file: a.namePrefix + response[idx] + a.nameSuffix,
-              actionElementEdit: a.actionElementEdit
-            }
-          })
-          callback(t)
-        })
+        chrome.tabs.sendMessage(id, { type: 'name', tab: t, actions: action.actions })
       })
     })
   } else {
-    callback(t)
+    addTab(Tabs, t)
   }
 }
 
@@ -120,7 +126,7 @@ function getActions(callback) {
 // 4. generates a tab state object based on 2,3
 // 5. adds or updates tab state for this tab
 //
-// w -> Tabs, chrome, actions
+// chrome, actions
 const chromeOnUpdated = (Tabs, getActions, tabId, changedProps, tab) => {
   if (changedProps.status !== 'complete') {
     return
@@ -129,11 +135,7 @@ const chromeOnUpdated = (Tabs, getActions, tabId, changedProps, tab) => {
 
   function add(action, actionable) {
     matched = true
-
-    _makeTabData(tabId, tab, action, actionable, (tabData) => {
-      Tabs.addState(tabData)
-      chrome.pageAction.show(tabId)
-    })
+    _makeTabData(Tabs, tabId, tab, action, actionable)
   }
 
   getActions((actions) => {
@@ -164,6 +166,7 @@ const chromeOnRemoved = (Tabs, tabId) => {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports.native = native
   module.exports.sync = sync
+  module.exports.addTab = addTab
   module.exports.onChange = onChange
   module.exports._cmpUrl = _cmpUrl
   module.exports._makeTabData = _makeTabData
@@ -174,4 +177,5 @@ if (typeof module !== 'undefined' && module.exports) {
   const t = new TabState(onChange.bind(undefined, native))
   chrome.tabs.onUpdated.addListener(chromeOnUpdated.bind(undefined, t, getActions))
   chrome.tabs.onRemoved.addListener(chromeOnRemoved.bind(undefined, t))
+  chrome.runtime.onMessage.addListener(addTab.bind(undefined, t))
 }

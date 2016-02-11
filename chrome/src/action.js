@@ -1,11 +1,30 @@
 console.log('kindred extension loaded');
 
-function kindredName(actions) {
-  return actions.map(function(action) {
+function kindredName(tab, actions) {
+  var names = actions.reduce(function(tmpNames, action) {
     var n = $(action.actionElementName)[0];
     var nText = $(n).text() || n.innerHTML;
-    return nText;
-  });
+
+    var invalid = actions.actionInvalidNames.filter(function(i) {
+      return i == nText
+    });
+
+    if (invalid.length === 0) {
+      tmpNames.push(nText)
+    }
+
+    return tmpNames;
+  }, []);
+
+  // all or nothing, either all names get matched
+  // or it starts over
+  if (names.length !== actions.length) {
+    window.setTimeout(function() {
+      kindredName(tab, actions)
+    }, 1000)
+  } else {
+    chrome.runtime.sendMessage(tab, actions, names)
+  }
 }
 
 function kindredEdit(selector, text) {
@@ -16,7 +35,7 @@ function kindredEdit(selector, text) {
 chrome.runtime.onMessage.addListener(function(msg, sender, reply) {
   switch(msg.type) {
     case 'name':
-      reply(kindredName(msg.actions));
+      kindredName(msg.tab, msg.actions);
       break;
     case 'edit':
       kindredEdit(msg.selector, msg.text);

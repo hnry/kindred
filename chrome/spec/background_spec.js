@@ -26,43 +26,111 @@ describe('background', () => {
   })
 
   describe('_cmpUrl', () => {
-    it('', () => {
-      pending()
+    const cmp = background._cmpUrl
+
+    it('url path is case sensitive', () => {
+      expect(cmp('http://example.com/Hi', 'http://example.com/hi')).toBe(false)
+    })
+
+    it('protocol matters, http or https', () => {
+      expect(cmp('https://example.com', 'http://example.com')).toBe(false)
+    })
+
+    it('understands regexp', () => {
+      expect(cmp('http://www.example.com/ASsf1', 'w{3}\.example.com/(.*)1'))
+    })
+
+    it('understands escaped string', () => {
+      expect(cmp('https://www.example.com/Asz1/d2', 'https://www\.example\.com\/Asz[1]\/d2')).toBe(true)
+    })
+  })
+
+  describe('addTab', () => {
+    function testAddTab(Tabs, tab, action, actionNames, expectTab, done) {
+      Tabs.addState = (t) => {
+        expect(t).toEqual(expectTab)
+        done()
+      }
+      background.addTab(Tabs, tab, action, actionNames)
+    }
+
+    it('adds even if nothing actionable',
+  (done) => {
+    const t = {
+      id: 123
+    }
+    const expectTab = {
+      id: 123
+    }
+    const a = [{namePrefix: 'test', nameSuffix: 'hi', actionElementEdit: 'test'}]
+    testAddTab(Tabs, t, a, undefined, expectTab, done)
+  })
+
+    it('adds actions', (done) => {
+      const t = {
+        id: 123,
+        action: {}
+      }
+      const expectTab = {
+        id: 123,
+        action: {
+          actions: [{
+            file: 'testgotamatchhi',
+            actionElementEdit: 'test1'
+          }]
+        }
+      }
+      const actions = [
+        {namePrefix: 'test', nameSuffix: 'hi', actionElementEdit: 'test1'}
+      ]
+
+      const actionNames = ['gotamatch']
+      testAddTab(Tabs, t, actions, actionNames, expectTab, done)
+    })
+
+    it('adds multiple actions', (done) => {
+      const t = {
+        id: 123,
+        action: {}
+      }
+      const expectTab = {
+        id: 123,
+        action: {
+          actions: [
+            {file: 'testgotamatchhi', actionElementEdit: 'test1'},
+            {file: 'test--secondmatch.js', actionElementEdit: 'test2'},
+            {file: 'testthird.txt', actionElementEdit: 'test3 p'}
+          ]
+        }
+      }
+      const actions = [
+        {namePrefix: 'test', nameSuffix: 'hi', actionElementEdit: 'test1'},
+        {namePrefix: 'test--', nameSuffix: '.js', actionElementEdit: 'test2'},
+        {namePrefix: 'test', nameSuffix: '.txt', actionElementEdit: 'test3 p'}
+      ]
+
+      const actionNames = ['gotamatch', 'secondmatch', 'third']
+      testAddTab(Tabs, t, actions, actionNames, expectTab, done)
     })
   })
 
   describe('_makeTabData', () => {
-    it('non-actionable tab data', (done) => {
-      const cb = (t) => {
-        expect(t).toEqual({
-          id: 200,
-          url: 'http://test.com/hï',
-          action: {
-            name: 'Test action',
-            actions: []
-          }
-        })
-        done()
-      }
+    // technically this test is calling addTab
+    it('non-actionable tab data', () => {
+      background._makeTabData(Tabs, 200, { url: 'http://test.com/hï' }, testActions[0], false)
 
-      background._makeTabData(200, { url: 'http://test.com/hï' }, testActions[0], false, cb)
+      expect(Tabs.state[0]).toEqual({
+        id: 200,
+        url: 'http://test.com/hï',
+        action: {
+          name: 'Test action',
+          actions: []
+        }
+      })
     })
 
-    function testActionable(testData, fileDir, expectT, done) {
-      chrome.tabs.sendMessage = ((i, o, callback) => {
-        callback(testData.testNames)
-      })
-      if (fileDir) {
-        testData.action.filePath = fileDir
-      }
-      const cb = (t) => {
-        expect(t).toEqual(expectT)
-        done()
-      }
-      background._makeTabData(testData.id, { url: testData.url }, testData.action, true, cb)
-    }
-
-    it('skips actionable if no fileDir', (done) => {
+    // technically this test is calling addTab
+    it('skips actionable if no fileDir', () => {
       const t = {
         id: 200,
         url: 'http://test.com/hï',
@@ -78,45 +146,34 @@ describe('background', () => {
         testNames: ['testNamé'],
         action: testActions[1]
       }
-      testActionable(testData, '', t, done)
+      background._makeTabData(Tabs, testData.id, { url: testData.url }, testData.action, true)
+      expect(Tabs.state[0]).toEqual(t)
     })
+
+    function testActionable(Tabs, testData, fileDir, expectT, done) {
+      chrome.tabs.sendMessage = ((i, o) => {
+        expect(o).toEqual(expectT)
+        done()
+      })
+      if (fileDir) {
+        testData.action.filePath = fileDir
+      }
+      background._makeTabData(Tabs, testData.id, { url: testData.url }, testData.action, true)
+    }
 
     it('actionable tab data', (done) => {
       const t = {
-        id: 210,
-        url: 'http://test.com/hï',
-        action: {
-          name: 'Test action 2',
-          filePath: '/test/path/',
-          actions: [
-            { file: 'example-testNamé.js', actionElementEdit: '.blah p'}
-          ]
-        }
-      }
-      const testData = {
-        id: 210,
-        url: 'http://test.com/hï',
-        testNames: ['testNamé'],
-        action: testActions[1]
-      }
-      testActionable(testData, '/test/path/', t, done)
-    })
-
-    it('ignores invalid names & waits for valid name')
-
-    it('multiple actionable tab data', (done) => {
-      const t = {
-        id: 210,
-        url: 'http://test.com/#hï',
-        action: {
-          name: 'Test actiön 3',
-          filePath: '/test/path/',
-          actions: [
-            { file: 'tèst-testNamé.js', actionElementEdit: '.test-t a p' },
-            { file: 'tèst-testcssName.css', actionElementEdit: '.test-t a b' },
-            { file: 'htmltestHTML.html', actionElementEdit: '.test-t a t' }
-          ]
-        }
+        type: 'name',
+        tab: {
+          id: 210,
+          url: 'http://test.com/#hï',
+          action: {
+            name: 'Test actiön 3',
+            filePath: '/test/path/',
+            actions: []
+          }
+        },
+        actions: testActions[2].actions
       }
       const testData = {
         id: 210,
@@ -124,7 +181,7 @@ describe('background', () => {
         testNames: ['testNamé', 'testcssName', 'testHTML'],
         action: testActions[2]
       }
-      testActionable(testData, '/test/path/', t, done)
+      testActionable(Tabs, testData, '/test/path/', t, done)
     })
   })
 
@@ -199,10 +256,6 @@ describe('background', () => {
         done()
       }
       background.chromeOnUpdated(Tabs, getTestActions, 700, { status: 'complete' }, { url: testActions[0].url })
-    })
-
-    it('supports regex urls', () => {
-      pending()
     })
   })
 

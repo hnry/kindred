@@ -51,7 +51,7 @@ describe('background', () => {
         expect(t).toEqual(expectTab)
         done()
       }
-      background.addTab(Tabs, tab, action, actionNames)
+      background.addTab(Tabs, { tab: tab, actions: action, names: actionNames })
     }
 
     it('adds even if nothing actionable',

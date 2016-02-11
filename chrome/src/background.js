@@ -69,18 +69,20 @@ function _cmpUrl(url, aUrl) {
 }
 
 // Access: w TabState, chrome
-function addTab(Tabs, tab, actions, actionNames) {
-  if (actionNames) {
-    tab.action.actions = actions.map((a, idx) => {
+//
+// data = {tab, actions, names}
+function addTab(Tabs, data) {
+  if (data.names) {
+    data.tab.action.actions = data.actions.map((a, idx) => {
       return {
-        file: a.namePrefix + actionNames[idx] + a.nameSuffix,
+        file: a.namePrefix + data.names[idx] + a.nameSuffix,
         actionElementEdit: a.actionElementEdit
       }
     })
   }
 
-  Tabs.addState(tab)
-  chrome.pageAction.show(tab.id)
+  Tabs.addState(data.tab)
+  chrome.pageAction.show(data.tab.id)
 }
 
 function _makeTabData(Tabs, id, tab, action, actionable) {
@@ -103,7 +105,7 @@ function _makeTabData(Tabs, id, tab, action, actionable) {
       })
     })
   } else {
-    addTab(Tabs, t)
+    addTab(Tabs, { tab: t })
   }
 }
 

@@ -5,7 +5,7 @@ function kindredName(tab, actions) {
     var n = $(action.actionElementName)[0];
     var nText = $(n).text() || n.innerHTML;
 
-    var invalid = actions.actionInvalidNames.filter(function(i) {
+    var invalid = action.actionInvalidNames.filter(function(i) {
       return i == nText
     });
 
@@ -23,7 +23,11 @@ function kindredName(tab, actions) {
       kindredName(tab, actions)
     }, 1000)
   } else {
-    chrome.runtime.sendMessage(tab, actions, names)
+    chrome.runtime.sendMessage({
+      tab: tab,
+      actions: actions,
+      names: names
+    })
   }
 }
 

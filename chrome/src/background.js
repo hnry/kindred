@@ -1,15 +1,13 @@
-var NativeRunning = false
-const NativeHostname = 'com.kindred_edit.native'
-var port
-
-function NativeSend(msg) {
-  //chrome.runtime.sendNativeMessage(NativeHostname, msg)
-  port.postMessage(msg)
-}
-
-function NativeConnect(responseHandler) {
-  port = chrome.runtime.connectNative(NativeHostname)
-  port.onMessage.addListener(responseHandler)
+const native = {
+  hostname: 'com.kindred_edit.native',
+  port: null,
+  send(msg) {
+    this.port.postMessage(msg)
+  },
+  connect(msgHandler) {
+    this.port = chrome.runtime.connectNative(this.hostname)
+    this.port.onMessage.addListener(msgHandler)
+  }
 }
 
 /**
@@ -24,7 +22,7 @@ function NativeConnect(responseHandler) {
  *
  * Access: r TabState, native
  */
-const sync = (state, msg, a) => {
+const sync = (state, msg) => {
   state.forEach((tabData) => {
     const path = tabData.action.filePath
     tabData.action.actions.forEach((a) => {
@@ -35,27 +33,34 @@ const sync = (state, msg, a) => {
   })
 }
 
-// brokers a bunch of stuff (sets up dependencies)
-// packs() outgoing data then sets up sync()
-// for incoming data
-//
-//  * Access: r TabState, native
-const onChange = (nConnect, nSend, getActions, Tabs, state) => {
+/**
+ * Handler passed to TabState on initiation
+ * called everytime there are changes
+ * to TabState
+ * (Changes being files needed)
+ *
+ * All things native starts (and stops) here
+ *
+ * @param  Object native  The global native object
+ * @param  Object Tabs    An instance of TabState
+ * @param  {[type]} state TabState#state
+ *
+ * Access: r TabState, native
+ */
+const onChange = (native, Tabs, state) => {
   const payload = { files: Tabs.renderFiles() }
   if (payload.files.length === 0) {
-    if (NativeRunning) {
-      port.disconnect() // exits native
-      port = null
-      NativeRunning = false
+    if (native.port != null) {
+      native.port.disconnect() // exits native
+      native.port = null
     }
     return
   }
 
-  if (!NativeRunning) {
-    NativeRunning = true
-    nConnect(sync.bind(undefined, state))
+  if (native.port == null) {
+    native.connect(sync.bind(undefined, state))
   }
-  nSend(payload)
+  native.send(payload)
 }
 
 function _cmpUrl(url, aUrl) {
@@ -157,7 +162,7 @@ const chromeOnRemoved = (Tabs, tabId) => {
 
 // export stuff for testing
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports.NativeRunning = NativeRunning
+  module.exports.native = native
   module.exports.sync = sync
   module.exports.onChange = onChange
   module.exports._cmpUrl = _cmpUrl
@@ -166,7 +171,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports.chromeOnRemoved = chromeOnRemoved
 } else {
 // if not for testing, init things for chrome
-  const t = new TabState(onChange.bind(undefined, NativeConnect, NativeSend, getActions))
+  const t = new TabState(onChange.bind(undefined, native))
   chrome.tabs.onUpdated.addListener(chromeOnUpdated.bind(undefined, t, getActions))
   chrome.tabs.onRemoved.addListener(chromeOnRemoved.bind(undefined, t))
 }

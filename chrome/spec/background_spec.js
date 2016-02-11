@@ -129,14 +129,57 @@ describe('background', () => {
   })
 
   describe('sync', () => {
-    it('', () => {
-      pending()
+    it('forwards file data to correct tabs', (done) => {
+      var count = 1
+      chrome.tabs.sendMessage = (id, data) => {
+        if (count == 1) {
+          testId = 1
+          testData = {type: 'edit', selector: '$selector', text: 'hî'}
+        } else if (count == 2) {
+          testId = 201
+          testData = { type: 'edit', selector: '$selector', text: 'hî'}
+        } else if (count == 3) {
+          testId = 12
+          testData = { type: 'edit', selector: 'element', text: 'hîi'}
+          done()
+        }
+        expect(id).toBe(testId)
+        expect(data).toEqual(testData)
+        count += 1
+      }
+      Tabs.state = [
+        { id: 1, action: { filePath: '/path/', actions: [{ actionElementEdit: '$selector', file: 'fīlé.txt' }] }},
+        { id: 201, action: { filePath: '/path/', actions: [{ actionElementEdit: '$selector', file: 'fīlé.txt' }] }},
+        { id: 12, action: { filePath: '/path1/', actions: [{ actionElementEdit: 'element', file: 'test.txt' }] }},
+      ]
+
+      // does 2 counts since 2 tabs accept this file
+      background.sync(Tabs.state, {file:'/path/fīlé.txt', data:'hî'})
+
+      // goes nowhere, no match
+      background.sync(Tabs.state, {file:'/path/unknown_file.txt', data:'hîi'})
+
+      // 3rd count
+      background.sync(Tabs.state, {file:'/path1/test.txt', data:'hîi'})
     })
   })
 
   describe('onChange', () => {
-    it('', () => {
-      pending()
+    it('stops native when state files is empty', () => {
+      var dcCalled = false
+      Tabs.renderFiles = () => {
+        return []
+      }
+      background.native.port = {
+        disconnect: () => {
+          dcCalled = true
+        }
+      }
+
+      background.onChange(background.native, Tabs, Tabs.state)
+
+      expect(dcCalled).toEqual(true)
+      expect(background.native.port).toEqual(null)
     })
   })
 

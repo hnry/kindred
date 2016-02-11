@@ -3,6 +3,8 @@
 
 set -e
 
+make build_native
+
 DIR="$( cd "$( dirname "$0" )" && pwd )"
 if [ "$(uname -s)" == "Darwin" ]; then
   if [ "$(whoami)" == "root" ]; then

@@ -92,6 +92,11 @@ describe('TabState', () => {
       t._prevState = []
     }
 
+    it('returns true if previously had state but state becomes empty []', () => {
+      createData(Tabs._prevState, 123, '/test/', ['hî'])
+      expect(Tabs._diffState()).toBe(true)
+    })
+
     it('diffs state and _prevState', () => {
       expect(Tabs._diffState()).toBe(false)
       createData(Tabs.state, 123, '/test/', ['hî'])

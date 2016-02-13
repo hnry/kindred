@@ -44,27 +44,51 @@ var Store = {
   }
 }
 
+// helps setup 2 way bindings for _generic_ onChange
+function bindingsHelper(namePrefix, stateKeys) {
+  stateKeys.forEach((k) => {
+    const n = k[0].toUpperCase() + k.slice(1, k.length)
+    this[namePrefix + n] = this.onChange.bind(this, k)
+  })
+}
+
 class FormAction extends React.Component {
   constructor() {
     super()
-    this.changeActionElementName = this.onChange.bind(this, 'actionElementName')
-    this.changeActionElementEdit = this.onChange.bind(this, 'actionElementEdit')
+    bindingsHelper.call(this, 'change', ['actionElementName', 'actionElementEdit', 'actionInvalidNames', 'namePrefix', 'nameSuffix'])
+
+    this.onRemove = this.onRemove.bind(this)
   }
 
   onChange(name, e) {
     let action = Object.assign({}, this.props.action)
     action[name] = e.target.value
-    this.props.onActionChange(action, this.props.index)
+    this.props.editActionable(action, this.props.index)
+  }
+
+  onRemove() {
+    this.props.removeActionable(this.props.index)
   }
 
   render() {
+    const id = this.props.index
+
     return (<div>
-      <input type='text' value={this.props.action.actionElementName} onChange={this.changeActionElementName} />
-      <input type='text' value={this.props.action.actionElementEdit} onChange={this.changeActionElementEdit} />
-      <input type='text' value={this.props.action.actionInvalidNames} />
-      <input type='text' value={this.props.action.namePrefix} />
-      <input type='text' value={this.props.action.nameSuffix} />
-      <button>Remove</button>
+      <label htmlFor={'elementname'+id}>Element Name:</label>
+      <input id={'elementname'+id} type='text' value={this.props.action.actionElementName} onChange={this.changeActionElementName} />
+
+      <label htmlFor={'elementedit'+id}>Element Edit:</label>
+      <input id={'elementedit'+id} type='text' value={this.props.action.actionElementEdit} onChange={this.changeActionElementEdit} />
+
+      <label htmlFor={'invalidnames'+id}>Invalid Names</label>
+      <input id={'invalidnames'+id} type='text' value={this.props.action.actionInvalidNames} onChange={this.changeActionInvalidNames} />
+
+      <label htmlFor={'nameprefix'+id}>Name Prefix:</label>
+      <input id={'nameprefix'+id} type='text' value={this.props.action.namePrefix} onChange={this.changeNamePrefix} />
+
+      <label htmlFor={'namesuffix'+id}>Name Suffix:</label>
+      <input id={'namesuffix'+id} type='text' value={this.props.action.nameSuffix} onChange={this.changeNameSuffix} />
+      <button onClick={this.onRemove}>Remove</button>
     </div>)
   }
 }
@@ -90,14 +114,14 @@ class Form extends React.Component {
 
     this.state = Object.assign({}, this.initialState)
 
-    this.changeName = this.onChange.bind(this, 'name')
-    this.changeUrl = this.onChange.bind(this, 'url')
-    this.changeActionUrl = this.onChange.bind(this, 'actionUrl')
+    bindingsHelper.call(this, 'change', ['filePath', 'name', 'url', 'actionUrl'])
 
-    this.addAction = this.addAction.bind(this)
     this.onSave = this.onSave.bind(this)
+    this.onRemove = this.onRemove.bind(this)
 
-    this.onActionChange = this.onActionChange.bind(this)
+    this.addActionable = this.addActionable.bind(this)
+    this.editActionable = this.editActionable.bind(this)
+    this.removeActionable = this.removeActionable.bind(this)
   }
 
   componentWillReceiveProps(props) {
@@ -108,62 +132,77 @@ class Form extends React.Component {
     this.setState(props.actions[props.selected])
   }
 
-  onActionChange(action, index) {
+  onSave() {
+    // TODO validation & obviously actually saving
+    console.log(this.state)
+  }
+
+  onRemove() {
+    // TODO show a modal dialog to confirm
+  }
+
+  editActionable(action, index) {
     let actions = this.state.actions.slice(0, this.state.actions.length)
     actions[index] = action
     this.setState({ actions })
   }
 
-  onSave() {
-    console.log(this.state)
-  }
-
-  addAction() {
+  addActionable() {
     let actions = this.state.actions.slice(0, this.state.actions.length)
     actions.push(Object.assign({}, this.initialAction))
     this.setState({ actions })
   }
 
-  removeAction() {
-
+  removeActionable(index) {
+    let actions = this.state.actions.slice(0, this.state.actions.length)
+    actions.splice(index, 1)
+    this.setState({ actions })
   }
 
-  onChange(name, e) {
+  onChange(key, e) {
     const c = {}
-    c[name] = e.target.value
+    c[key] = e.target.value
     this.setState(c)
   }
 
   renderActions() {
     return this.state.actions.map((action, idx) => {
-      return (<FormAction key={idx} action={action} index={idx} onActionChange={this.onActionChange} />)
+      return (<FormAction key={idx} action={action} index={idx} editActionable={this.editActionable} removeActionable={this.removeActionable} />)
     })
   }
 
   render() {
-    return (
-      <div className="col right-col">
-      File path
+    const showDelete = () => {
+      if (this.props.selected != 'new') {
+        return (<button onClick={this.onRemove}>Delete</button>)
+      }
+    }
 
-      Action Name:
-      <input type="text" value={this.state.name} onChange={this.changeName} />
-      URL:
-      <input type="text" value={this.state.url} onChange={this.changeUrl} />
-      Action URL:
-      <input type="text" value={this.state.actionUrl} onChange={this.changeActionUrl} />
+    return (<div className="col right-col">
+      <label htmlFor='filepath'>File path:</label>
+      <input id='filepath' type='text' value={this.state.filePath} onChange={this.changeFilePath} />
+
+      <label htmlFor='actionName'>Action Name:</label>
+      <input id='actionName' type="text" value={this.state.name} onChange={this.changeName} />
+
+      <label htmlFor='url'>URL:</label>
+      <input id='url' type="text" value={this.state.url} onChange={this.changeUrl} />
+
+      <label htmlFor='actionUrl'>Action URL:</label>
+      <input id='actionUrl' type="text" value={this.state.actionUrl} onChange={this.changeActionUrl} />
+
       <hr />
       {this.renderActions()}
-      <button onClick={this.addAction}>Add a new action</button>
+      <button onClick={this.addActionable}>Add a new action</button>
       <button onClick={this.onSave}>Save</button>
-      </div>
-    )
+      {showDelete()}
+    </div>)
   }
 }
 
 class ActionsList extends React.Component {
   constructor() {
     super()
-    this.state = {}
   }
 
   onSelect(selection) {
@@ -215,7 +254,7 @@ class Dashboard extends React.Component {
   render() {
     return (
       <div>
-        <ActionsList actions={this.state.actions} onSelect={this.onSelect.bind(this)} />
+        <ActionsList actions={this.state.actions} selected={this.state.selected} onSelect={this.onSelect.bind(this)} />
         <Form actions={this.state.actions} selected={this.state.selected} />
       </div>
     )

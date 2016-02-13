@@ -21,7 +21,7 @@ var defaultActions = [
       {
         actionElementEdit: '',
         actionElementName: '',
-        actionInvalidNames: [],
+        actionInvalidNames: ['yea', 'what'],
         namePrefix: '',
         nameSuffix: ''
       }

@@ -12,6 +12,8 @@ build_js:
 	@echo "transpiling chrome extension src..."
 	node_modules/.bin/babel --no-comments --minified chrome/src -d chrome/ext
 	cp node_modules/jquery/dist/jquery.min.js chrome/ext/jquery.js
+	cp node_modules/react/dist/react.min.js chrome/ext/react.js
+	cp node_modules/react-dom/dist/react-dom.min.js chrome/ext/react-dom.js
 
 watch:
 	@echo "auto-building chrome extension src..."

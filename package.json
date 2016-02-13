@@ -4,11 +4,14 @@
   "description": "(chrome extension) use your editor instead of a web editor",
   "main": "index.js",
   "dependencies": {
-    "jquery": "^2.2.0"
+    "jquery": "^2.2.0",
+    "react": "^0.14.7",
+    "react-dom": "^0.14.7"
   },
   "devDependencies": {
     "babel-cli": "^6.4.5",
     "babel-preset-es2015": "^6.3.13",
+    "babel-preset-react": "^6.5.0",
     "jasmine": "^2.4.1"
   },
   "scripts": {

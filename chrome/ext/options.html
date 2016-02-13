@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>kindred | dashboard</title>
+  <style>
+    body {
+      font-family: Helvetica, Arial, Tahoma, sans-serif;
+      font-size: 100%;
+      margin: 0;
+    }
+    #name {
+      font-size: 1.8em;
+    }
+    .hdr {
+      background-color: #fffddd;
+      margin-bottom: 15px;
+    }
+    .col {
+      margin: 5px;
+    }
+    .left-col {
+      float: left;
+      margin-right: 25px;
+      min-width: 150px;
+      max-width: 200px;
+    }
+    ul {
+      list-style-type: none;
+      margin: 0; padding: 0;
+    }
+    li {
+      background-color: #cddf02;
+      margin: 5px 0 5px 0;
+      padding: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    li:hover {
+      background-color: #ffcf02;
+    }
+    #new-action {
+      margin-bottom: 15px;
+      background-color: blue;
+    }
+    #new-action:hover {
+      background-color: #cccddd;
+    }
+    .right-col {
+
+    }
+  </style>
+</head>
+<body>
+
+<div class='hdr'>
+  <div id='name'>
+    kindred
+  </div>
+
+  <div>
+    v0.0.1
+  </div>
+
+  <div id="status"></div>
+</div>
+
+<div id='dashboard'>
+</div>
+
+
+<script src="react.js"></script>
+<script src="react-dom.js"></script>
+<script src="defaultActions.js"></script>
+<script src="options.js"></script>
+</body>
+</html>

@@ -35,9 +35,39 @@ var Store = {
       cb(storage.actions)
     })
   },
-  set() {
-    chrome.storage.sync.set() // TODO
-    this.publish()
+  save(action, prevAction) {
+    this.get((actions) => {
+      let a = actions.slice(0, actions.length)
+      if (prevAction) {
+        for (let i = 0, l = a.length; i < l; i++) {
+          if (a[i].name.toLowerCase() === prevAction.name.toLowerCase()) {
+            a[i] = action
+            break
+          }
+        }
+      } else {
+        a.push(action)
+      }
+
+      this._set(a)
+    })
+  },
+  del(action) {
+    this.get((actions) => {
+      let a = actions.slice(0, actions.length)
+      for (let i = 0, l = a.length; i < l; i++) {
+        if (a[i].name.toLowerCase() === action.name.toLowerCase()) {
+          a.splice(i, 1)
+          this._set(a)
+          break
+        }
+      }
+    })
+  },
+  _set(actions) {
+    chrome.storage.sync.set({actions: actions}, () => {
+      this.publish()
+    })
   },
   publish() {
     this._subscribers.forEach(fn => fn())
@@ -96,14 +126,14 @@ class FormAction extends React.Component {
 class Form extends React.Component {
   constructor() {
     super()
-    this.initialState = {
+    this.initialAction = {
         name: 'New Action Name',
         url: '',
         actionUrl: '',
         filePath: '',
         actions: []
     }
-    this.initialAction = {
+    this.initialActionable = {
       //filePath: '',
       actionElementEdit: '',
       actionElementName: '',
@@ -112,7 +142,7 @@ class Form extends React.Component {
       nameSuffix: ''
     }
 
-    this.state = Object.assign({}, this.initialState)
+    this.state = {action: Object.assign({}, this.initialAction)}
 
     bindingsHelper.call(this, 'change', ['filePath', 'name', 'url', 'actionUrl'])
 
@@ -126,47 +156,64 @@ class Form extends React.Component {
 
   componentWillReceiveProps(props) {
     if (props.selected == 'new') {
-      this.setState(Object.assign({}, this.initialState))
+      const action = this._copyAction(this.initialAction)
+      this.setState({action})
       return
     }
-    this.setState(props.actions[props.selected])
+
+    const action = this._copyAction(props.actions[props.selected])
+    this.setState({action})
+  }
+
+  _copyAction(action) {
+    let a = Object.assign({}, action)
+    a.actions = Object.assign([], action.actions)
+    //a.actions.actionInvalidNames = Object.assign([], action.actions.actionInvalidNames)
+    return a
   }
 
   onSave() {
-    // TODO validation & obviously actually saving
-    console.log(this.state)
+    // TODO validation
+    if (this.props.selected == 'new') {
+      Store.save(this.state.action)
+    } else {
+      Store.save(this.state.action, this.props.actions[this.props.selected])
+    }
   }
 
   onRemove() {
-    // TODO show a modal dialog to confirm
-  }
-
-  editActionable(action, index) {
-    let actions = this.state.actions.slice(0, this.state.actions.length)
-    actions[index] = action
-    this.setState({ actions })
+    const r = window.confirm('Are you sure you want to delete ' + this.state.action.name + '?')
+    if (r) {
+      Store.del(this.state.actionOrig)
+    }
   }
 
   addActionable() {
-    let actions = this.state.actions.slice(0, this.state.actions.length)
-    actions.push(Object.assign({}, this.initialAction))
-    this.setState({ actions })
+    const a = this._copyAction(this.state.action)
+    a.actions.push(Object.assign({}, this.initialActionable))
+    this.setState({ action: a })
+  }
+
+  editActionable(editedAction, index) {
+    const action = this._copyAction(this.state.action)
+    action.actions[index] = editedAction
+    this.setState({ action })
   }
 
   removeActionable(index) {
-    let actions = this.state.actions.slice(0, this.state.actions.length)
-    actions.splice(index, 1)
-    this.setState({ actions })
+    const action = this._copyAction(this.state.action)
+    action.actions.splice(index, 1)
+    this.setState({ action })
   }
 
   onChange(key, e) {
-    const c = {}
-    c[key] = e.target.value
-    this.setState(c)
+    let action = Object.assign({}, this.state.action)
+    action[key] = e.target.value
+    this.setState({ action })
   }
 
   renderActions() {
-    return this.state.actions.map((action, idx) => {
+    return this.state.action.actions.map((action, idx) => {
       return (<FormAction key={idx} action={action} index={idx} editActionable={this.editActionable} removeActionable={this.removeActionable} />)
     })
   }
@@ -180,16 +227,16 @@ class Form extends React.Component {
 
     return (<div className="col right-col">
       <label htmlFor='filepath'>File path:</label>
-      <input id='filepath' type='text' value={this.state.filePath} onChange={this.changeFilePath} />
+      <input id='filepath' type='text' value={this.state.action.filePath} onChange={this.changeFilePath} />
 
       <label htmlFor='actionName'>Action Name:</label>
-      <input id='actionName' type="text" value={this.state.name} onChange={this.changeName} />
+      <input id='actionName' type="text" value={this.state.action.name} onChange={this.changeName} />
 
       <label htmlFor='url'>URL:</label>
-      <input id='url' type="text" value={this.state.url} onChange={this.changeUrl} />
+      <input id='url' type="text" value={this.state.action.url} onChange={this.changeUrl} />
 
       <label htmlFor='actionUrl'>Action URL:</label>
-      <input id='actionUrl' type="text" value={this.state.actionUrl} onChange={this.changeActionUrl} />
+      <input id='actionUrl' type="text" value={this.state.action.actionUrl} onChange={this.changeActionUrl} />
 
       <hr />
       {this.renderActions()}

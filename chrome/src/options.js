@@ -92,7 +92,7 @@ class FormAction extends React.Component {
 
   onChange(name, e) {
     let action = Object.assign({}, this.props.action)
-    action[name] = e.target.value
+    action[name] = e
     this.props.editActionable(action, this.props.index)
   }
 
@@ -104,22 +104,39 @@ class FormAction extends React.Component {
     const id = this.props.index
 
     return (<div>
-      <label htmlFor={'elementname'+id}>Element Name:</label>
-      <input id={'elementname'+id} type='text' value={this.props.action.actionElementName} onChange={this.changeActionElementName} />
-
-      <label htmlFor={'elementedit'+id}>Element Edit:</label>
-      <input id={'elementedit'+id} type='text' value={this.props.action.actionElementEdit} onChange={this.changeActionElementEdit} />
-
-      <label htmlFor={'invalidnames'+id}>Invalid Names</label>
-      <input id={'invalidnames'+id} type='text' value={this.props.action.actionInvalidNames} onChange={this.changeActionInvalidNames} />
-
-      <label htmlFor={'nameprefix'+id}>Name Prefix:</label>
-      <input id={'nameprefix'+id} type='text' value={this.props.action.namePrefix} onChange={this.changeNamePrefix} />
-
-      <label htmlFor={'namesuffix'+id}>Name Suffix:</label>
-      <input id={'namesuffix'+id} type='text' value={this.props.action.nameSuffix} onChange={this.changeNameSuffix} />
+      <Input key={id} label='Element Name:' value={this.props.action.actionElementName} onChange={this.changeActionElementName} />
+      <Input key={id} label='Element Edit:' value={this.props.action.actionElementEdit} onChange={this.changeActionElementEdit} />
+      <Input key={id} label='Invalid Names:' value={this.props.action.actionInvalidNames} onChange={this.changeActionInvalidNames} />
+      <Input key={id} label='Prefix:' value={this.props.action.namePrefix} onChange={this.changeNamePrefix} />
+      <Input key={id} label='Suffix:' value={this.props.action.nameSuffix onChange={this.changeNameSuffix} />
       <button onClick={this.onRemove}>Remove</button>
     </div>)
+  }
+}
+
+class Input extends React.Component {
+  constructor() {
+    super()
+    this.state = { error: '' }
+    this.onChange = this.onChange.bind(this)
+  }
+
+  onChange(e) {
+    // run validators
+    let err = ''
+    if (e.target.value === '') {
+      err = 'Cannot be empty.'
+    }
+    this.setState({error: err})
+    this.props.onChange(e.target.value, err)
+  }
+
+  render() {
+    return (<span>
+      <label htmlFor={'input-'+this.props.key+'-'+ this.props.value}>{this.props.label}</label>
+      <span>{this.state.error}</span>
+      <input id={'input-'+this.props.key+'-'+ this.props.value} type="text" value={this.props.value} onChange={this.onChange} />
+    </span>)
   }
 }
 
@@ -208,7 +225,11 @@ class Form extends React.Component {
 
   onChange(key, e) {
     let action = Object.assign({}, this.state.action)
-    action[key] = e.target.value
+    if (e && e.target && e.target.value) {
+      action[key] = e.target.value
+    } else {
+      action[key] = e
+    }
     this.setState({ action })
   }
 
@@ -226,18 +247,10 @@ class Form extends React.Component {
     }
 
     return (<div className="col right-col">
-      <label htmlFor='filepath'>File path:</label>
-      <input id='filepath' type='text' value={this.state.action.filePath} onChange={this.changeFilePath} />
-
-      <label htmlFor='actionName'>Action Name:</label>
-      <input id='actionName' type="text" value={this.state.action.name} onChange={this.changeName} />
-
-      <label htmlFor='url'>URL:</label>
-      <input id='url' type="text" value={this.state.action.url} onChange={this.changeUrl} />
-
-      <label htmlFor='actionUrl'>Action URL:</label>
-      <input id='actionUrl' type="text" value={this.state.action.actionUrl} onChange={this.changeActionUrl} />
-
+      <Input label='File path:' value={this.state.action.filePath} onChange={this.changeFilePath} />
+      <Input label='Action Name:' value={this.state.action.name} onChange={this.changeName} />
+      <Input label='URL:' value={this.state.action.url} onChange={this.changeUrl} />
+      <Input label='Action URL:' value={this.state.action.actionUrl} onChange={this.changeActionUrl} />
       <hr />
       {this.renderActions()}
       <button onClick={this.addActionable}>Add a new action</button>

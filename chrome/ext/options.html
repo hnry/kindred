@@ -4,65 +4,128 @@
   <title>kindred | dashboard</title>
   <style>
     body {
-      font-family: Helvetica, Arial, Tahoma, sans-serif;
+      font-family: 'Helvetica Neue', Helvetica, Arial, Tahoma, sans-serif;
       font-size: 100%;
       margin: 0;
+      background-color: rgb(95, 116, 143);
     }
     #name {
-      font-size: 1.8em;
+      font-size: 2.1em;
+    }
+    .form {
+      opacity: 1;
+      -webkit-transition: opacity 1s ease-in;
     }
     .hide {
       display: none;
+      opacity: 0.5;
+      -webkit-transition: opacity 1s ease-in;
     }
     .hdr {
-      background-color: #fffddd;
-      margin-bottom: 15px;
+      background-color: rgb(216, 227, 218);
+      padding: 10px;
+      margin-bottom: 18px;
+      box-shadow: 1px -1px 20px rgb(170, 182, 173);
     }
     .col {
-      margin: 5px;
+      position: relative;
+      min-height: 1px;
+      min-width: 150px;
+      float: left;
+    }
+    .right-col {
+    }
+    .form-wrapper {
+      margin-left: 40px;
     }
     .left-col {
-      float: left;
-      margin-right: 25px;
-      min-width: 150px;
       max-width: 200px;
     }
     ul {
       list-style-type: none;
       margin: 0; padding: 0;
     }
+    li, li:hover, #new-action, #new-action:hover {
+      -webkit-transition: background-color 700ms ease-in;
+    }
     li {
-      background-color: #cddf02;
-      margin: 5px 0 5px 0;
-      padding: 5px;
-      border-radius: 5px;
+      font-size: 0.9em;
+      background-color: rgb(93,141,190);
+      margin: 0;
+      padding: 15px 5px 15px 5px;
+      border-radius: 2px;
+      border-bottom: 1px rgb(95, 116, 143) solid;
       cursor: pointer;
     }
     li:hover {
-      background-color: #ffcf02;
+      background-color: rgb(103, 156, 210);
+    }
+    .selected, .selected:hover {
+      background-color: rgb(95, 116, 143);
+      -webkit-transition: background-color 500ms ease-in;
     }
     #new-action {
       margin-bottom: 15px;
-      background-color: blue;
+      background-color: rgb(178, 166, 202);
     }
     #new-action:hover {
-      background-color: #cccddd;
+      background-color: rgb(192, 180, 218);
     }
-    .right-col {
 
+    label {
+      display: block;
+      font-size: 0.8em;
+      margin: 2px;
+      color: #fff;
+    }
+    .form-error {
+      background-color: rgb(192, 180, 218);
+    }
+
+    input {
+      border-style: none;
+      padding: 6px 4px 3px 4px;
+      width: 100%;
+      font-size: 1em;
+      border-radius: 0;
+      border-bottom: 4px #fff solid;
+    }
+
+    input:focus {
+      outline: 0;
+      border-bottom: 4px rgb(103, 156, 210) solid;
+      -webkit-transition: border-bottom 700ms ease-in;
+    }
+
+    button {
+      background-color: rgb(235, 229, 246);
+      margin: 5px;
+      padding: 10px;
+      border-width: 1px;
+      border-style: none;
+      font-size: 0.9em;
+    }
+    button:active {
+      border-bottom: 4px rgb(103, 156, 210) solid;
+    }
+    button:focus {
+      outline: 0;
+    }
+    button:disabled {
+      background-color: rgb(195, 190, 205);
     }
   </style>
 </head>
 <body>
 
 <div class='hdr'>
-  <div id='name'>
+  <span id='name'>
     kindred
-  </div>
+  </span>
 
-  <div>
+  <span>
     v0.0.1
-  </div>
+  </span>
 
   <div id="status"></div>
 </div>

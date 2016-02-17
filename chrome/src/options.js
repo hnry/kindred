@@ -194,11 +194,11 @@ class Input extends React.Component {
 
   render() {
     const key = this.props.index || ''
-    return (<span>
+    return (<div>
       <label htmlFor={'input-'+key+ this.props.label}>{this.props.label}:</label>
-      <span>{this.state.error}</span>
+      <span className='form-error'>{this.state.error}</span>
       <input id={'input-'+key+ this.props.label} type="text" value={this.props.value} onChange={this.onChange} />
-    </span>)
+    </div>)
   }
 }
 
@@ -323,13 +323,11 @@ class Form extends React.Component {
     const action = this.state.action
     this.runValidators()
     if (this.isValid()) {
-      alert('save')
-      /*
-      if (this.props.selected == 'new') {
+      if (this.props.action === 'new') {
         Store.save(action)
       } else {
-        Store.save(action, this.props.actions[this.props.selected])
-      }*/
+        Store.save(action, this.props.action)
+      }
     }
   }
 
@@ -391,11 +389,11 @@ class Form extends React.Component {
       if (!this.props.selected) {
         return ' hide'
       }
-      return ''
+      return ' form'
     }
 
-    return (<div className={"col right-col" + isSelected()}>
-      <Input label='File path' value={this.state.action.filePath} onChange={this.changeFilePath} required />
+    return (<div className={isSelected()}>
+      <Input label='File Path' value={this.state.action.filePath} onChange={this.changeFilePath} required />
       <Input label='Action Name' name={this.props.action || ''} value={this.state.action.name} onChange={this.changeName} required unique />
       <Input label='URL' value={this.state.action.url} onChange={this.changeUrl} />
       <Input label='Action URL' value={this.state.action.actionUrl} onChange={this.changeActionUrl} required />
@@ -419,7 +417,8 @@ class ActionsList extends React.Component {
 
   renderActions() {
     return this.props.actions.map((action, idx) => {
-      return (<li key={idx} onClick={this.onSelect.bind(this, idx)}>{action.name}</li>)
+      const cls = this.props.selected === idx ? 'selected' : '';
+      return (<li className={cls} key={idx} onClick={this.onSelect.bind(this, idx)}>{action.name}</li>)
     })
   }
 
@@ -469,8 +468,12 @@ class Dashboard extends React.Component {
     return (
       <div>
         <ActionsList actions={this.state.actions} selected={this.state.selected} onSelect={this.onSelect.bind(this)} />
-        <Form key='new' action='new' selected={this.state.selected === 'new'} />
-        {this.renderForms()}
+        <div className="col right-col">
+          <div className="form-wrapper">
+          <Form key='new' action='new' selected={this.state.selected === 'new'} />
+          {this.renderForms()}
+          </div>
+        </div>
       </div>
     )
   }

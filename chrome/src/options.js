@@ -148,7 +148,7 @@ class Input extends React.Component {
 
   setError(err) {
     this.error = err
-    this.setState({error: err})
+    this.setState({ error: err })
   }
 
   validate(v) {
@@ -233,6 +233,8 @@ class Form extends React.Component {
     this.removeActionable = this.removeActionable.bind(this)
 
     this.inputs = []
+
+    this.prevSelected = true
   }
 
   static childContextTypes = {
@@ -266,6 +268,12 @@ class Form extends React.Component {
     })
   }
 
+  resetErrors() {
+    this.inputs.forEach(function(input) {
+      input.setError('')
+    })
+  }
+
   isValid() {
     let v = true
     for (let i = 0, l = this.inputs.length; i < l; i++) {
@@ -289,6 +297,11 @@ class Form extends React.Component {
   }
 
   componentWillReceiveProps(props) {
+    if (props.selected && !this.prevSelected) {
+      this.resetErrors()
+    }
+    this.prevSelected = props.selected
+
     if (props.action == 'new') {
       const action = this._copyAction(this.initialAction)
       this.setState({action})

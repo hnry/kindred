@@ -43,7 +43,7 @@ class TabState {
   }
 
   _willChangeState() {
-    this._prevState = this.state.slice(0, this.state.length)
+    this._prevState = this.state.slice()
   }
 
   _diffState() {

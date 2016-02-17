@@ -102,7 +102,7 @@ describe('TabState', () => {
       createData(Tabs.state, 123, '/test/', ['hî'])
       expect(Tabs._diffState()).toBe(true)
 
-      Tabs._prevState = Tabs.state.slice(0, Tabs.state.length)
+      Tabs._prevState = Tabs.state.slice()
       expect(Tabs._diffState()).toBe(false)
 
       createData(Tabs.state, 12, '/test/', ['hî'])
@@ -114,7 +114,7 @@ describe('TabState', () => {
       createData(Tabs.state, 1, '/test/', ['hî22'])
       expect(Tabs._diffState()).toBe(true)
 
-      Tabs._prevState = Tabs.state.slice(0, Tabs.state.length)
+      Tabs._prevState = Tabs.state.slice()
       expect(Tabs._diffState()).toBe(false)
 
       createData(Tabs._prevState, 1, '/test/', ['hi22'])

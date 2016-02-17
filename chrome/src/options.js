@@ -103,13 +103,22 @@ class FormAction extends React.Component {
   render() {
     const id = this.props.index
 
-    return (<div>
-      <Input index={id} label='Element Name' value={this.props.action.actionElementName} onChange={this.changeActionElementName} required />
-      <Input index={id} label='Element Edit' value={this.props.action.actionElementEdit} onChange={this.changeActionElementEdit} required />
-      <Input index={id} label='Invalid Names' value={this.props.action.actionInvalidNames} onChange={this.changeActionInvalidNames} />
-      <Input index={id} label='Prefix' value={this.props.action.namePrefix} onChange={this.changeNamePrefix} />
-      <Input index={id} label='Suffix' value={this.props.action.nameSuffix} onChange={this.changeNameSuffix} />
-      <button onClick={this.onRemove}>Remove</button>
+    return (
+    <div className='form-action'>
+      <button onClick={this.onRemove}>X</button>
+
+      <Input index={id} label='Element Name' value={this.props.action.actionElementName} onChange={this.changeActionElementName} required desc='jQuery selector for Action URL to find name associated with this action' />
+
+      <Input index={id} label='Element Edit' value={this.props.action.actionElementEdit} onChange={this.changeActionElementEdit} required desc='jQuery selector for Action URL to find the editable form to bind to' />
+
+      <Input index={id} label='Invalid Names' value={this.props.action.actionInvalidNames} onChange={this.changeActionInvalidNames} desc='Comma separated names to ignore when finding Element Name' />
+
+      <div className='col left-col'>
+      <Input index={id} label='Prefix' value={this.props.action.namePrefix} onChange={this.changeNamePrefix} desc='Prefix file name associated with this action' />
+      </div>
+      <div className='col right-col form-wrapper'>
+      <Input index={id} label='Suffix' value={this.props.action.nameSuffix} onChange={this.changeNameSuffix} desc='Suffx (or file extension) for file name associated with this action' />
+      </div>
     </div>)
   }
 }
@@ -195,9 +204,10 @@ class Input extends React.Component {
   render() {
     const key = this.props.index || ''
     return (<div>
-      <label htmlFor={'input-'+key+ this.props.label}>{this.props.label}:</label>
-      <span className='form-error'>{this.state.error}</span>
-      <input id={'input-'+key+ this.props.label} type="text" value={this.props.value} onChange={this.onChange} />
+      <label htmlFor={'input-'+key+ this.props.label}>{this.props.label}</label>
+      <div className='input-desc'>{this.props.desc}</div>
+      <div className='form-error'>{this.state.error}</div>
+      <input className={this.props.className} id={'input-'+key+ this.props.label} type="text" value={this.props.value} onChange={this.onChange} />
     </div>)
   }
 }
@@ -206,7 +216,7 @@ class Form extends React.Component {
   constructor() {
     super()
     this.initialAction = {
-        name: 'New Action Name',
+        name: 'New Name',
         url: '',
         actionUrl: '',
         filePath: '',
@@ -334,7 +344,7 @@ class Form extends React.Component {
   onRemove() {
     const r = window.confirm('Are you sure you want to delete ' + this.props.action.name + '?')
     if (r) {
-      Store.del(this.state.actionOrig)
+      Store.del(this.props.action)
     }
   }
 
@@ -366,6 +376,12 @@ class Form extends React.Component {
     // TODO the isValid is buggy here as far as the rendering of it
     // it's correct, but it doesn't force a render() update
     // so sometimes it's not visually obvious through the save button
+    //
+    // bug #1, trigger error "Name must be unique." and showSave is
+    // one step behind
+    //
+    // bug #2, add action, actionElementName and the rest take 2 keys
+    // to trigger Save to show
     if (this.isChanged() && this.isValid()) {
         return (<button onClick={this.onSave}>Save</button>)
     }
@@ -380,7 +396,7 @@ class Form extends React.Component {
 
   render() {
     const showDelete = () => {
-      if (this.props.selected != 'new') {
+      if (this.props.action != 'new') {
         return (<button onClick={this.onRemove}>Delete</button>)
       }
     }
@@ -392,14 +408,15 @@ class Form extends React.Component {
       return ' form'
     }
 
-    return (<div className={isSelected()}>
-      <Input label='File Path' value={this.state.action.filePath} onChange={this.changeFilePath} required />
-      <Input label='Action Name' name={this.props.action || ''} value={this.state.action.name} onChange={this.changeName} required unique />
-      <Input label='URL' value={this.state.action.url} onChange={this.changeUrl} />
-      <Input label='Action URL' value={this.state.action.actionUrl} onChange={this.changeActionUrl} required />
-      <hr />
+    return (<div className={'form' + isSelected()}>
+      <Input className='input-name' label='Name' name={this.props.action || ''} value={this.state.action.name} onChange={this.changeName} required unique />
+      <Input label='Folder Path' value={this.state.action.filePath} onChange={this.changeFilePath} required  desc='The folder containing files to bind (must be absolute path)' />
+      <Input label='URL' value={this.state.action.url} onChange={this.changeUrl}  desc='(Optional) For visually associating a web site with kindred' />
+      <Input label='Action URL' value={this.state.action.actionUrl} onChange={this.changeActionUrl} required  desc='The URL (or Regxp) to start scanning for actions you have created' />
+
       {this.renderActions()}
-      <button onClick={this.addActionable}>Add a new action</button>
+
+      <button onClick={this.addActionable}>Add new action</button>
       {this.showSave()}
       {showDelete()}
     </div>)
@@ -426,7 +443,7 @@ class ActionsList extends React.Component {
     return (
       <div className='col left-col'>
         <ul>
-          <li id='new-action' onClick={this.onSelect.bind(this, 'new')}>Create New Action</li>
+          <li id='new-action' onClick={this.onSelect.bind(this, 'new')}>Create New Rule</li>
           {this.renderActions()}
         </ul>
       </div>
@@ -469,7 +486,7 @@ class Dashboard extends React.Component {
       <div>
         <ActionsList actions={this.state.actions} selected={this.state.selected} onSelect={this.onSelect.bind(this)} />
         <div className="col right-col">
-          <div className="form-wrapper">
+          <div className="forms-wrapper">
           <Form key='new' action='new' selected={this.state.selected === 'new'} />
           {this.renderForms()}
           </div>

@@ -1,5 +1,5 @@
-var TabState = require('../ext/tabState')
-var background = require('../ext/background')
+var TabState = require('../src/tabState')
+var background = require('../src/background')
 var testActions = require('./support/actions')
 
 function getTestActions(callback) {

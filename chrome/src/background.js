@@ -1,3 +1,5 @@
+'use strict';
+
 const native = {
   hostname: 'com.kindred_edit.native',
   port: null,

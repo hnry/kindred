@@ -10,13 +10,17 @@
   },
   "devDependencies": {
     "babel-cli": "^6.4.5",
+    "babel-jest": "^6.0.1",
     "babel-preset-es2015": "^6.3.13",
     "babel-preset-react": "^6.5.0",
     "babel-preset-stage-1": "^6.5.0",
-    "jasmine": "^2.4.1"
+    "enzyme": "^2.0.0",
+    "jasmine": "^2.4.1",
+    "jsdom": "^8.0.4",
+    "react-addons-test-utils": "^0.14.7"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "make test"
   },
   "author": "hnry",
   "license": "Apache-2.0"

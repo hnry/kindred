@@ -19,12 +19,11 @@ watch:
 	@echo "auto-building chrome extension src..."
 	node_modules/.bin/babel --no-comments -w chrome/src -d chrome/ext
 
-test: test_js test_native
+test: test_js test_ui test_native
 
 test_js:
-	@node_modules/.bin/babel -q --retain-lines chrome/src -d chrome/ext
 	@echo "\n$(COLOR)Running Chrome tests...$(COLOR_RESET)"
-	@node_modules/.bin/jasmine JASMINE_CONFIG_PATH=chrome/spec/support/jasmine.json
+	@node_modules/.bin/jasmine JASMINE_CONFIG_PATH=chrome/spec/support/extension.json
 	@echo "\n"
 
 test_native:
@@ -32,4 +31,9 @@ test_native:
 	@go test -race ./...
 	@echo "\n"
 
-.PHONY: default build test watch test_js test_native build_js build_native
+test_ui:
+	@echo "\n$(COLOR)Running Chrome UI tests...$(COLOR_RESET)"
+	@node_modules/.bin/jasmine JASMINE_CONFIG_PATH=chrome/spec/support/ui.json
+	@echo "\n"
+
+.PHONY: default build test watch test_js test_ui test_native build_js build_native

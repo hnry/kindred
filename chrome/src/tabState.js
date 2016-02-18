@@ -1,3 +1,5 @@
+'use strict';
+
 /*
   State is either changed through addState or removeState (input)
 

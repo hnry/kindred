@@ -1,3 +1,9 @@
+if (typeof module !== 'undefined' && module.exports) {
+  var React = require('react')
+  var ReactDOM = require('react-dom')
+  var defaultActions = require('./defaultActions')
+}
+
 // Object.assign polyfill for older Chrome browsers < 45
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign
 if (typeof Object.assign != 'function') {
@@ -131,7 +137,6 @@ class Input extends React.Component {
 
     this.error = ''
     this.changed = false
-    this.firstProp = false
     this.origValue = null
   }
 
@@ -145,8 +150,7 @@ class Input extends React.Component {
   }
 
   componentWillReceiveProps(props) {
-    if (!this.firstProp) {
-      this.firstProp = true
+    if (this.origValue === null) {
       this.origValue = props.value
     }
   }
@@ -247,6 +251,14 @@ class Form extends React.Component {
     this.prevSelected = true
   }
 
+  static propTypes = {
+    action: React.PropTypes.oneOfType([
+      React.PropTypes.string,
+      React.PropTypes.object
+    ]),
+    selected: React.PropTypes.bool
+  };
+
   static childContextTypes = {
     register: React.PropTypes.func,
     unregister: React.PropTypes.func
@@ -306,20 +318,22 @@ class Form extends React.Component {
     return v
   }
 
-  componentWillReceiveProps(props) {
-    if (props.selected && !this.prevSelected) {
-      this.resetErrors()
-    }
-    this.prevSelected = props.selected
-
-    if (props.action == 'new') {
+  componentDidMount() {
+    if (this.props.action === 'new') {
       const action = this._copyAction(this.initialAction)
       this.setState({action})
       return
     }
 
-    const action = this._copyAction(props.action)
+    const action = this._copyAction(this.props.action)
     this.setState({action})
+  }
+
+  componentWillReceiveProps(props) {
+    if (props.selected && !this.prevSelected) {
+      this.resetErrors()
+    }
+    this.prevSelected = props.selected
   }
 
   _copyAction(action) {
@@ -496,4 +510,9 @@ class Dashboard extends React.Component {
   }
 }
 
-ReactDOM.render(<Dashboard />, document.getElementById('dashboard'))
+// for testing
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {ActionsList, FormAction, Form, Input}
+} else {
+  ReactDOM.render(<Dashboard />, document.getElementById('dashboard'))
+}

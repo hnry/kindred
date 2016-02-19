@@ -1,9 +1,3 @@
-if (typeof module !== 'undefined' && module.exports) {
-  var React = require('react')
-  var ReactDOM = require('react-dom')
-  var defaultActions = require('./defaultActions')
-}
-
 // Object.assign polyfill for older Chrome browsers < 45
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign
 if (typeof Object.assign != 'function') {
@@ -147,12 +141,7 @@ class Input extends React.Component {
 
   componentWillMount() {
     this.context.register(this)
-  }
-
-  componentWillReceiveProps(props) {
-    if (this.origValue === null) {
-      this.origValue = props.value
-    }
+    this.origValue = this.props.value
   }
 
   componentWillUnmount() {
@@ -164,18 +153,20 @@ class Input extends React.Component {
     this.setState({ error: err })
   }
 
-  validate(v) {
+  validate(v, cb) {
     v = typeof v === 'undefined' ? this.props.value : v;
+    cb = typeof cb === 'undefined' ? function() {} : cb;
     let err = ''
 
-    if (this.props.required && v == '') {
+    if (this.props.required && !err && v == '') {
       err = 'Cannot be empty.'
       this.setError(err)
+      cb(err)
       return
     }
 
     if (this.props.unique && !err && v) {
-      const savedName = this.props.name.name || ''
+      const savedName = this.origValue || ''
       Store.get((actions) => {
         for (let i = 0, l = actions.length; i < l; i++) {
           const testn = actions[i].name.toLowerCase()
@@ -185,16 +176,17 @@ class Input extends React.Component {
           }
         }
         this.setError(err)
+        cb(err)
       })
       return
     }
 
-    this.setError('')
+    this.setError(err)
+    cb()
   }
 
   onChange(e) {
     const newValue = e.target.value
-    this.validate(newValue)
 
     if (this.origValue !== null && !this.changed && newValue !== this.origValue) {
       this.changed = true
@@ -202,16 +194,19 @@ class Input extends React.Component {
       this.changed = false
     }
 
-    this.props.onChange(newValue)
+    this.validate(newValue, () => {
+      this.props.onChange(newValue)
+    })
   }
 
   render() {
     const key = this.props.index || ''
+    const htmlName = this.props.label.toLowerCase().replace(' ', '-')
     return (<div>
-      <label htmlFor={'input-'+key+ this.props.label}>{this.props.label}</label>
+      <label htmlFor={'input-'+key+ htmlName}>{this.props.label}</label>
       <div className='input-desc'>{this.props.desc}</div>
       <div className='form-error'>{this.state.error}</div>
-      <input className={this.props.className} id={'input-'+key+ this.props.label} type="text" value={this.props.value} onChange={this.onChange} />
+      <input className={this.props.className} id={'input-'+key+htmlName} type="text" value={this.props.value} onChange={this.onChange} />
     </div>)
   }
 }
@@ -235,7 +230,7 @@ class Form extends React.Component {
       nameSuffix: ''
     }
 
-    this.state = {action: Object.assign({}, this.initialAction)}
+    this.state = {}
 
     bindingsHelper.call(this, 'change', ['filePath', 'name', 'url', 'actionUrl'])
 
@@ -284,9 +279,15 @@ class Form extends React.Component {
     }
   }
 
-  runValidators() {
+  runValidators(cb) {
+    const l = this.inputs.length
+    let count = 0
+
     this.inputs.forEach((input) => {
-      input.validate()
+      input.validate(undefined, () => {
+        count += 1
+        if (count === l) cb();
+      })
     })
   }
 
@@ -318,7 +319,7 @@ class Form extends React.Component {
     return v
   }
 
-  componentDidMount() {
+  componentWillMount() {
     if (this.props.action === 'new') {
       const action = this._copyAction(this.initialAction)
       this.setState({action})
@@ -331,6 +332,10 @@ class Form extends React.Component {
 
   componentWillReceiveProps(props) {
     if (props.selected && !this.prevSelected) {
+      if (props.selected === 'new') {
+        const action = this._copyAction(this.initialAction)
+        this.setState({action})
+      }
       this.resetErrors()
     }
     this.prevSelected = props.selected
@@ -345,14 +350,16 @@ class Form extends React.Component {
 
   onSave() {
     const action = this.state.action
-    this.runValidators()
-    if (this.isValid()) {
-      if (this.props.action === 'new') {
-        Store.save(action)
-      } else {
-        Store.save(action, this.props.action)
+    this.runValidators(() => {
+      if (this.isValid()) {
+        console.log('valid')
+        if (this.props.action === 'new') {
+          Store.save(action)
+        } else {
+          Store.save(action, this.props.action)
+        }
       }
-    }
+    })
   }
 
   onRemove() {
@@ -387,15 +394,6 @@ class Form extends React.Component {
   }
 
   showSave() {
-    // TODO the isValid is buggy here as far as the rendering of it
-    // it's correct, but it doesn't force a render() update
-    // so sometimes it's not visually obvious through the save button
-    //
-    // bug #1, trigger error "Name must be unique." and showSave is
-    // one step behind
-    //
-    // bug #2, add action, actionElementName and the rest take 2 keys
-    // to trigger Save to show
     if (this.isChanged() && this.isValid()) {
         return (<button onClick={this.onSave}>Save</button>)
     }
@@ -423,7 +421,7 @@ class Form extends React.Component {
     }
 
     return (<div className={'form' + isSelected()}>
-      <Input className='input-name' label='Name' name={this.props.action || ''} value={this.state.action.name} onChange={this.changeName} required unique />
+      <Input className='input-name' label='Name' value={this.state.action.name} onChange={this.changeName} required unique />
       <Input label='Folder Path' value={this.state.action.filePath} onChange={this.changeFilePath} required  desc='The folder containing files to bind (must be absolute path)' />
       <Input label='URL' value={this.state.action.url} onChange={this.changeUrl}  desc='(Optional) For visually associating a web site with kindred' />
       <Input label='Action URL' value={this.state.action.actionUrl} onChange={this.changeActionUrl} required  desc='The URL (or Regxp) to start scanning for actions you have created' />

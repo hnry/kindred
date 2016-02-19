@@ -133,7 +133,8 @@ describe('Form', () => {
     expect(save.disabled).toBe(true)
   })
 
-  it('onSave()', (done) => {
+  // TODO tricky test...
+  it('onSave() new with empty fields should fail', (done) => {
     const f = mount(<Form action='new' selected={true} />)
 
     global.chrome.storage.sync.set = () => {
@@ -145,8 +146,61 @@ describe('Form', () => {
 
     typing(input, 'hihi')
 
-    const form = f.get(0)
-    form.onSave()
-    setTimeout(done, 200)
+    f.get(0).onSave()
+    setTimeout(done, 100)
+  })
+
+  it('<Input> changes values', (done) => {
+    const f = mount(<Form action={defaultActions[1]} selected={true} />)
+
+    f.find(Input).forEach((i) => {
+      typing(i.find('input').get(0), 'nëw value')
+    })
+
+    setTimeout(() => {
+      f.find(Input).forEach((i) => {
+        expect(i.find('input').get(0).value).toBe('nëw value')
+      })
+      done()
+    }, 10)
+  })
+
+  it('successful onSave() new resets new form', (done) => {
+    const f = mount(<Form action='new' selected={true} />)
+
+    // fill form to be valid
+    f.find('input').forEach((i) => {
+      typing(i.get(0), 'test')
+    })
+
+    const input = f.find('input').get(0)
+    const save = f.find('button').get(1)
+
+    global.chrome.storage.sync.set = () => {
+      expect(input).not.toBe('test')
+      expect(save.textContent).toBe('Save')
+      f.update()
+      expect(save.disabled).toBe(true)
+      done()
+    }
+
+    setTimeout(() => {
+      expect(input.value).toBe('test')
+      f.get(0).onSave()
+    }, 10)
+  })
+
+  it('successful onRemove() rule resets to new form', (done) => {
+    const select = (selection) => {
+      expect(selection).toBe('new')
+      done()
+    }
+
+    const f = mount(<Form action={defaultActions[1]} selected={true} onSelect={select} />)
+
+    global.window.confirm = () => {
+      return true
+    }
+    f.get(0).onRemove()
   })
 })

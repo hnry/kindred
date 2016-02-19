@@ -294,6 +294,7 @@ class Form extends React.Component {
   resetErrors() {
     this.inputs.forEach(function(input) {
       input.setError('')
+      input.changed = false
     })
   }
 
@@ -333,10 +334,10 @@ class Form extends React.Component {
   componentWillReceiveProps(props) {
     if (props.selected && !this.prevSelected) {
       if (props.selected === 'new') {
-        const action = this._copyAction(this.initialAction)
-        this.setState({action})
+        this.resetForm()
+      } else {
+        this.resetErrors()
       }
-      this.resetErrors()
     }
     this.prevSelected = props.selected
   }
@@ -348,17 +349,25 @@ class Form extends React.Component {
     return a
   }
 
+  resetForm() {
+    const action = this._copyAction(this.initialAction)
+    this.setState({action})
+    this.resetErrors()
+  }
+
   onSave() {
-    const action = this.state.action
     this.runValidators(() => {
+      const action = this.state.action
+
       if (this.isValid()) {
-        console.log('valid')
         if (this.props.action === 'new') {
           Store.save(action)
         } else {
           Store.save(action, this.props.action)
         }
+        this.resetForm()
       }
+
     })
   }
 
@@ -366,6 +375,7 @@ class Form extends React.Component {
     const r = window.confirm('Are you sure you want to delete ' + this.props.action.name + '?')
     if (r) {
       Store.del(this.props.action)
+      this.props.onSelect('new')
     }
   }
 
@@ -489,7 +499,7 @@ class Dashboard extends React.Component {
 
   renderForms() {
     return this.state.actions.map((action, idx) => {
-      return (<Form key={idx} action={action} selected={this.state.selected === idx} />)
+      return (<Form key={idx} action={action} selected={this.state.selected === idx} onSelect={this.onSelect.bind(this)} />)
     })
   }
 
@@ -499,7 +509,7 @@ class Dashboard extends React.Component {
         <ActionsList actions={this.state.actions} selected={this.state.selected} onSelect={this.onSelect.bind(this)} />
         <div className="col right-col">
           <div className="forms-wrapper">
-          <Form key='new' action='new' selected={this.state.selected === 'new'} />
+          <Form key='new' action='new' selected={this.state.selected === 'new'} onSelect={this.onSelect.bind(this)} />
           {this.renderForms()}
           </div>
         </div>

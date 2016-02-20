@@ -174,13 +174,11 @@ describe('Form', () => {
     })
 
     const input = f.find('input').get(0)
-    const save = f.find('button').get(1)
 
     global.chrome.storage.sync.set = () => {
-      expect(input).not.toBe('test')
-      expect(save.textContent).toBe('Save')
-      f.update()
-      expect(save.disabled).toBe(true)
+      f.find('input').forEach((i) => {
+        expect(i.get(0).value).not.toBe('test')
+      })
       done()
     }
 

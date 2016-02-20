@@ -1,13 +1,12 @@
 module.exports = [
   {
     name: 'Test action',
-    url: '',
+    url: 'http://example.com/test',
     actionUrl: 'http://example.com/test',
-    filePath: '/test',
     actions: [
       {
-        actionElementEdit: 'edit',
-        actionElementName: 'name',
+        actionElementEdit: '',
+        actionElementName: '',
         actionInvalidNames: [],
         namePrefix: '',
         nameSuffix: ''

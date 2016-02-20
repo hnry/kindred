@@ -141,11 +141,15 @@ class Input extends React.Component {
 
   componentWillMount() {
     this.context.register(this)
-    this.origValue = this.props.value
+    this.resetOrigValue()
   }
 
   componentWillUnmount() {
     this.context.unregister(this)
+  }
+
+  resetOrigValue() {
+    this.origValue = this.props.value
   }
 
   setError(err) {
@@ -295,6 +299,7 @@ class Form extends React.Component {
     this.inputs.forEach(function(input) {
       input.setError('')
       input.changed = false
+      input.resetOrigValue()
     })
   }
 
@@ -321,23 +326,12 @@ class Form extends React.Component {
   }
 
   componentWillMount() {
-    if (this.props.action === 'new') {
-      const action = this._copyAction(this.initialAction)
-      this.setState({action})
-      return
-    }
-
-    const action = this._copyAction(this.props.action)
-    this.setState({action})
+    this.resetForm()
   }
 
   componentWillReceiveProps(props) {
     if (props.selected && !this.prevSelected) {
-      if (props.selected === 'new') {
-        this.resetForm()
-      } else {
-        this.resetErrors()
-      }
+      this.resetForm()
     }
     this.prevSelected = props.selected
   }
@@ -350,24 +344,28 @@ class Form extends React.Component {
   }
 
   resetForm() {
-    const action = this._copyAction(this.initialAction)
-    this.setState({action})
+    if (this.props.action === 'new') {
+      const action = this._copyAction(this.initialAction)
+      this.setState({action})
+    } else {
+      const action = this._copyAction(this.props.action)
+      this.setState({action})
+    }
     this.resetErrors()
   }
 
   onSave() {
     this.runValidators(() => {
       const action = this.state.action
-
       if (this.isValid()) {
         if (this.props.action === 'new') {
           Store.save(action)
+          this.resetForm()
         } else {
           Store.save(action, this.props.action)
+          this.resetErrors()
         }
-        this.resetForm()
       }
-
     })
   }
 

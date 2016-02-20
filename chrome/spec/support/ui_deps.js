@@ -3,7 +3,6 @@ global.document = require('jsdom').jsdom('')
 global.window = document.defaultView
 global.navigator = window.navigator
 
-
 // default actions
 global.defaultActions = require('./actions')
 

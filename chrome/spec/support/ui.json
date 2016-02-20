@@ -5,7 +5,7 @@
   ],
   "helpers": [
     "../../../node_modules/babel-register/lib/node.js",
-    "../support/deps.js"
+    "../support/ui_deps.js"
   ],
   "stopSpecOnExpectationFailure": false,
   "random": false

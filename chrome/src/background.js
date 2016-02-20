@@ -1,5 +1,6 @@
 'use strict';
-
+//    chrome.pageAction.setTitle({tabId: tabId, title: 'testing'})
+//    chrome.pageAction.setIcon({tabId: tabId, path: 'error.png'})
 const native = {
   hostname: 'com.kindred_edit.native',
   port: null,
@@ -19,8 +20,8 @@ const native = {
  *
  * sends each `message` to the corresponding tab
  *
- * @param  Object state    current TabState
- * @param  Object msg object JSON of incoming message
+ * @param  {Object} state    current TabState
+ * @param  {Object} msg object JSON of incoming message
  *
  * Access: r TabState, native
  */
@@ -43,13 +44,13 @@ const sync = (state, msg) => {
  *
  * All things native starts (and stops) here
  *
- * @param  Object native  The global native object
- * @param  Object Tabs    An instance of TabState
+ * @param  {Object} native  The global native object
+ * @param  {Object} Tabs    An instance of TabState
  * @param  {[type]} state TabState#state
  *
  * Access: r TabState, native
  */
-const onChange = (native, Tabs, state) => {
+function onChange(native, Tabs, state) {
   const payload = { files: Tabs.renderFiles() }
   if (payload.files.length === 0) {
     if (native.port != null) {
@@ -66,6 +67,9 @@ const onChange = (native, Tabs, state) => {
 }
 
 function _cmpUrl(url, aUrl) {
+  if (!aUrl.trim()) {
+    return false
+  }
   const r = new RegExp(aUrl)
   return r.test(url)
 }
@@ -73,7 +77,7 @@ function _cmpUrl(url, aUrl) {
 // Access: w TabState, chrome
 //
 // data = {tab, actions, names}
-function addTab(Tabs, data) {
+function addTab(data) {
   if (data.names) {
     data.tab.action.actions = data.actions.map((a, idx) => {
       return {
@@ -87,7 +91,7 @@ function addTab(Tabs, data) {
   chrome.pageAction.show(data.tab.id)
 }
 
-function _makeTabData(Tabs, id, tab, action, actionable) {
+function _makeTabData(id, tab, action, actionable) {
   const t = {
     id: id,
     url: tab.url,
@@ -97,7 +101,7 @@ function _makeTabData(Tabs, id, tab, action, actionable) {
     }
   }
 
-  // TODO should show warning if no fileDir, must be set in settings
+  // TODO should show warning if no filePath, must be set in settings
   if (actionable && action.filePath) {
     t.action.filePath = action.filePath
 
@@ -106,21 +110,17 @@ function _makeTabData(Tabs, id, tab, action, actionable) {
         chrome.tabs.sendMessage(id, { type: 'name', tab: t, actions: action.actions })
       })
     })
+
   } else {
-    addTab(Tabs, { tab: t })
+    addTab({ tab: t })
   }
 }
 
 function getActions(callback) {
-  let a = defaultActions || []
-
-  // FIXME something quick to test with while this func is a work in progress
-  a.forEach((action) => {
-    action.filePath = '/Users/h/'
-  })
-
-  chrome.storage.sync.get('actions', (actions) => {
-    callback(a)
+  chrome.storage.sync.get({
+    actions: defaultActions
+  }, (storage) => {
+    callback(storage.actions)
   })
 }
 
@@ -131,7 +131,7 @@ function getActions(callback) {
 // 5. adds or updates tab state for this tab
 //
 // chrome, actions
-const chromeOnUpdated = (Tabs, getActions, tabId, changedProps, tab) => {
+const chromeOnUpdated = (tabId, changedProps, tab) => {
   if (changedProps.status !== 'complete') {
     return
   }
@@ -139,10 +139,11 @@ const chromeOnUpdated = (Tabs, getActions, tabId, changedProps, tab) => {
 
   function add(action, actionable) {
     matched = true
-    _makeTabData(Tabs, tabId, tab, action, actionable)
+    _makeTabData(tabId, tab, action, actionable)
   }
 
   getActions((actions) => {
+    // TODO visually show which action gets matched
     for (let i = 0, l = actions.length; i < l; i++) {
       if (_cmpUrl(tab.url, actions[i].actionUrl)) {
         add(actions[i], true)
@@ -162,24 +163,20 @@ const chromeOnUpdated = (Tabs, getActions, tabId, changedProps, tab) => {
 }
 
 // w -> Tabs, chrome
-const chromeOnRemoved = (Tabs, tabId) => {
+const chromeOnRemoved = (tabId) => {
   Tabs.removeState(tabId)
 }
 
 // export stuff for testing
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports.native = native
-  module.exports.sync = sync
-  module.exports.addTab = addTab
-  module.exports.onChange = onChange
-  module.exports._cmpUrl = _cmpUrl
-  module.exports._makeTabData = _makeTabData
-  module.exports.chromeOnUpdated = chromeOnUpdated
-  module.exports.chromeOnRemoved = chromeOnRemoved
-} else {
-// if not for testing, init things for chrome
-  const t = new TabState(onChange.bind(undefined, native))
-  chrome.tabs.onUpdated.addListener(chromeOnUpdated.bind(undefined, t, getActions))
-  chrome.tabs.onRemoved.addListener(chromeOnRemoved.bind(undefined, t))
-  chrome.runtime.onMessage.addListener(addTab.bind(undefined, t))
+  module.exports = {
+    native,
+    sync,
+    addTab,
+    onChange,
+    _cmpUrl,
+    _makeTabData,
+    chromeOnUpdated,
+    chromeOnRemoved
+  }
 }

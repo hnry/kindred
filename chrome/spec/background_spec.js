@@ -1,10 +1,5 @@
-var TabState = require('../src/tabState')
-var background = require('../src/background')
-var testActions = require('./support/actions')
-
-function getTestActions(callback) {
-  callback(testActions)
-}
+import TabState from '../src/tabState'
+import background from '../src/background'
 
 describe('background', () => {
 
@@ -12,7 +7,7 @@ describe('background', () => {
 
   beforeEach(() => {
     Tabs = new TabState()
-
+    global.Tabs = Tabs
     global.chrome = {
       pageAction: {
         show: () => {},
@@ -21,6 +16,16 @@ describe('background', () => {
       tabs: {
         executeScript: (i, f, cb) => { cb() },
         sendMessage: (i, o, cb) => { cb() }
+      },
+      storage: {
+        sync: {
+          get: function(options, cb) {
+            // simulate async in looking up storage
+            setTimeout(function() {
+              cb({ actions: defaultActions })
+            }, 1)
+          }
+        }
       }
     }
   })
@@ -46,12 +51,12 @@ describe('background', () => {
   })
 
   describe('addTab', () => {
-    function testAddTab(Tabs, tab, action, actionNames, expectTab, done) {
+    function testAddTab(tab, action, actionNames, expectTab, done) {
       Tabs.addState = (t) => {
         expect(t).toEqual(expectTab)
         done()
       }
-      background.addTab(Tabs, { tab: tab, actions: action, names: actionNames })
+      background.addTab({ tab: tab, actions: action, names: actionNames })
     }
 
     it('adds even if nothing actionable',
@@ -63,7 +68,7 @@ describe('background', () => {
       id: 123
     }
     const a = [{namePrefix: 'test', nameSuffix: 'hi', actionElementEdit: 'test'}]
-    testAddTab(Tabs, t, a, undefined, expectTab, done)
+    testAddTab(t, a, undefined, expectTab, done)
   })
 
     it('adds actions', (done) => {
@@ -85,7 +90,7 @@ describe('background', () => {
       ]
 
       const actionNames = ['gotamatch']
-      testAddTab(Tabs, t, actions, actionNames, expectTab, done)
+      testAddTab(t, actions, actionNames, expectTab, done)
     })
 
     it('adds multiple actions', (done) => {
@@ -110,14 +115,14 @@ describe('background', () => {
       ]
 
       const actionNames = ['gotamatch', 'secondmatch', 'third']
-      testAddTab(Tabs, t, actions, actionNames, expectTab, done)
+      testAddTab(t, actions, actionNames, expectTab, done)
     })
   })
 
   describe('_makeTabData', () => {
     // technically this test is calling addTab
     it('non-actionable tab data', () => {
-      background._makeTabData(Tabs, 200, { url: 'http://test.com/hï' }, testActions[0], false)
+      background._makeTabData(200, { url: 'http://test.com/hï' }, defaultActions[0], false)
 
       expect(Tabs.state[0]).toEqual({
         id: 200,
@@ -135,7 +140,7 @@ describe('background', () => {
         id: 200,
         url: 'http://test.com/hï',
         action: {
-          name: 'Test action 2',
+          name: 'Test actionn',
           actions: []
         }
       }
@@ -144,13 +149,13 @@ describe('background', () => {
         id: 200,
         url: 'http://test.com/hï',
         testNames: ['testNamé'],
-        action: testActions[1]
+        action: defaultActions[1]
       }
-      background._makeTabData(Tabs, testData.id, { url: testData.url }, testData.action, true)
+      background._makeTabData(testData.id, { url: testData.url }, testData.action, true)
       expect(Tabs.state[0]).toEqual(t)
     })
 
-    function testActionable(Tabs, testData, fileDir, expectT, done) {
+    function testActionable(testData, fileDir, expectT, done) {
       chrome.tabs.sendMessage = ((i, o) => {
         expect(o).toEqual(expectT)
         done()
@@ -158,7 +163,7 @@ describe('background', () => {
       if (fileDir) {
         testData.action.filePath = fileDir
       }
-      background._makeTabData(Tabs, testData.id, { url: testData.url }, testData.action, true)
+      background._makeTabData(testData.id, { url: testData.url }, testData.action, true)
     }
 
     it('actionable tab data', (done) => {
@@ -173,21 +178,23 @@ describe('background', () => {
             actions: []
           }
         },
-        actions: testActions[2].actions
+        actions: defaultActions[2].actions
       }
       const testData = {
         id: 210,
         url: 'http://test.com/#hï',
         testNames: ['testNamé', 'testcssName', 'testHTML'],
-        action: testActions[2]
+        action: defaultActions[2]
       }
-      testActionable(Tabs, testData, '/test/path/', t, done)
+      testActionable(testData, '/test/path/', t, done)
     })
   })
 
   describe('sync', () => {
     it('forwards file data to correct tabs', (done) => {
       var count = 1
+      let testId
+      let testData
       chrome.tabs.sendMessage = (id, data) => {
         if (count == 1) {
           testId = 1
@@ -241,13 +248,13 @@ describe('background', () => {
   })
 
   describe('chromeOnUpdated', () => {
-    it('removes from tab state if update changes previously match', () => {
-      background.getActions = () => {
-        return testActions
-      }
+    it('removes from tab state if update changes previously match', (done) => {
       Tabs.state.push({id: 5})
-      background.chromeOnUpdated(Tabs, getTestActions, 5, { status: 'complete' }, { url: 'test' })
-      expect(Tabs.state.length).toEqual(0)
+      background.chromeOnUpdated(5, { status: 'complete' }, { url: 'test' })
+      setTimeout(() => {
+        expect(Tabs.state.length).toEqual(0)
+        done()
+      }, 10)
     })
 
     it('calls TabState to add on match', (done) => {
@@ -255,7 +262,7 @@ describe('background', () => {
         expect(tab.id).toEqual(700)
         done()
       }
-      background.chromeOnUpdated(Tabs, getTestActions, 700, { status: 'complete' }, { url: testActions[0].url })
+      background.chromeOnUpdated(700, { status: 'complete' }, { url: defaultActions[0].url })
     })
   })
 
@@ -266,7 +273,7 @@ describe('background', () => {
         expect(tabId).toEqual(5)
         done()
       }
-      background.chromeOnRemoved(Tabs, 5)
+      background.chromeOnRemoved(5)
     })
   })
 

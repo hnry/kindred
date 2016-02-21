@@ -1,6 +1,5 @@
 'use strict';
-//    chrome.pageAction.setTitle({tabId: tabId, title: 'testing'})
-//    chrome.pageAction.setIcon({tabId: tabId, path: 'error.png'})
+
 const native = {
   hostname: 'com.kindred_edit.native',
   port: null,
@@ -46,7 +45,7 @@ const sync = (state, msg) => {
  *
  * @param  {Object} native  The global native object
  * @param  {Object} Tabs    An instance of TabState
- * @param  {[type]} state TabState#state
+ * @param  {Object} state TabState#state
  *
  * Access: r TabState, native
  */
@@ -101,7 +100,6 @@ function _makeTabData(id, tab, action, actionable) {
     }
   }
 
-  // TODO should show warning if no filePath, must be set in settings
   if (actionable && action.filePath) {
     t.action.filePath = action.filePath
 
@@ -110,8 +108,11 @@ function _makeTabData(id, tab, action, actionable) {
         chrome.tabs.sendMessage(id, { type: 'name', tab: t, actions: action.actions })
       })
     })
-
   } else {
+    if (actionable) {
+      Tabs.messagesAdd(id, 'error', 'No file path set')
+      chrome.pageAction.setIcon({tabId: id, path: 'error.png'})
+    }
     addTab({ tab: t })
   }
 }
@@ -124,26 +125,23 @@ function getActions(callback) {
   })
 }
 
-// 1. figures out if existing tab state is stale and removes it
-// 2. sees if tab is a match
-// 3. figures out if match is 'actionable'; must get file path
-// 4. generates a tab state object based on 2,3
-// 5. adds or updates tab state for this tab
-//
-// chrome, actions
+// processes tab for a match
+// the chain of processing is
+// getActions -> _cmpUrl -> _makeTabData -> addTab
 const chromeOnUpdated = (tabId, changedProps, tab) => {
   if (changedProps.status !== 'complete') {
     return
   }
+
   let matched = false
 
   function add(action, actionable) {
+    // reset tab icon to default here
     matched = true
     _makeTabData(tabId, tab, action, actionable)
   }
 
   getActions((actions) => {
-    // TODO visually show which action gets matched
     for (let i = 0, l = actions.length; i < l; i++) {
       if (_cmpUrl(tab.url, actions[i].actionUrl)) {
         add(actions[i], true)
@@ -155,6 +153,7 @@ const chromeOnUpdated = (tabId, changedProps, tab) => {
       }
     }
 
+    // remove tab data that's no longer valid
     if (Tabs._findIndexById(tabId) !== undefined && !matched) {
       chrome.pageAction.hide(tabId)
       Tabs.removeState(tabId)

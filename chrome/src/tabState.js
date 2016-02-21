@@ -1,17 +1,60 @@
 'use strict';
 
 /*
-  State is either changed through addState or removeState (input)
+  State is either changed through addState or removeState
 
-  Any changes are handled by onChange (passed in on initiation) (output)
+  Any changes (files needed) are handled by onChange (passed in on initiation)
+
+  Any files that need to be refreshed are handled by onRefresh
  */
 class TabState {
-  constructor(onChange) {
+  constructor(onChange, onRefresh) {
+    // stores TabData (which is just a plain object holding tab info)
     this.state = []
     this._prevState = []
+
+    // stores messages to pass to UI (popup.js) for each tab
+    // { tabId, type (error or status), msg }
+    this.messages = []
+
     this.onChange = onChange || function() {}
+    this.onRefresh = onRefresh || function() {}
   }
 
+  /**
+   * read stored messages and deletes them after
+   * @param  {Number} tabId tab id
+   * @return {Array[Object]}       array of messages
+   */
+  messagesRead(tabId) {
+    const r = []
+    this.messages.forEach((message, idx) => {
+      if (message.id == tabId) {
+        r.push(message)
+        this.messages[idx] = null
+      }
+    })
+    this.messages = this.messages.filter((msg, idx) => {
+      return msg !== null
+    })
+    return r
+  }
+
+  /**
+   * adds message to messages store
+   * @param  {Number} tabId tab id
+   * @param  {String} type  message type
+   * @param  {String} msg   message
+   */
+  messagesAdd(tabId, type, msg) {
+    this.messages.push({ id: tabId, type, msg })
+  }
+
+  /**
+   * returns the index in state of a tabId
+   * @param  {Number} id tab id
+   * @return {Number or undefined}   Index of tabId in state or undefined
+   */
   _findIndexById(id) {
     for (let i = 0, l = this.state.length; i < l; i++) {
       const t = this.state[i]
@@ -22,11 +65,39 @@ class TabState {
     return undefined
   }
 
+  /**
+   * called by addState()
+   * solves issues #1
+   *
+   * refreshes already known files that get triggered
+   * by addState() since a browser refresh happens
+   * and file data is not stored anywhere, so native
+   * needs to know to re-read the file
+   * since native does not re-read a file that has
+   * not changed since last read
+   * @param  {Object} tabData TabData
+   */
+  _refreshFiles(tabData) {
+    const refresh = this.renderFiles([tabData])
+    const f = this.renderFiles(this.state)
+    // anything in f that is also in refresh
+    // needs to be 'refreshed'
+    const r = f.filter((file) => {
+      return refresh.filter((newfile) => {
+        return file === newfile
+      }).length
+    })
+
+    this.onRefresh(r)
+  }
+
   addState(tabData) {
     const idx = this._findIndexById(tabData.id)
     this._willChangeState()
 
     if (idx !== undefined) {
+      // figure out if any files need refreshing
+      this._refreshFiles(tabData)
       this.state[idx] = tabData
     } else {
       this.state.push(tabData)
@@ -39,7 +110,10 @@ class TabState {
     const idx = this._findIndexById(tabId)
     if (idx !== undefined) {
       this._willChangeState()
+
       this.state.splice(idx, 1)
+      this.messagesRead(tabId)
+
       this._changedState()
     }
   }
@@ -73,10 +147,15 @@ class TabState {
     st = st || this.state
 
     return st.reduce((files, tab) => {
-      const path = tab.action && tab.action.filePath || ''
+      let path = tab.action && tab.action.filePath || ''
 
       if (!path) {
           return files
+      }
+
+      // fix all possible pathing issues here TODO
+      if (path[path.length - 1] !== '/') {
+        path = path + '/'
       }
 
       const f = tab.action.actions.reduce((newF, a) => {

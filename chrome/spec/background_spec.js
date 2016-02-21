@@ -11,7 +11,8 @@ describe('background', () => {
     global.chrome = {
       pageAction: {
         show: () => {},
-        hide: () => {}
+        hide: () => {},
+        setIcon: () => {}
       },
       tabs: {
         executeScript: (i, f, cb) => { cb() },

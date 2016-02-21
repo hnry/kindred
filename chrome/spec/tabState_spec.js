@@ -1,6 +1,6 @@
 global.chrome = {}
 
-var TabState = require('../ext/tabState')
+var TabState = require('../src/tabState')
 
 function createData(state, id, path, files) {
   const r = {
@@ -24,6 +24,50 @@ describe('TabState', () => {
     Tabs = new TabState()
   })
 
+  describe('messagesRead', () => {
+    beforeEach(() => {
+      Tabs.messages = [
+        {id: 1, msg: 'hi hi'},
+        {id: 2, msg: 'test'},
+        {id: 2, msg: 'hi hi test'},
+        {id: 3, msg: 'hi hi'},
+        {id: 5, msg: 'hi hi'},
+        {id: 8, msg: 'hi hi'}
+      ]
+    })
+
+    it('reads messages', () => {
+      const msgs = Tabs.messagesRead(2)
+      expect(msgs.length).toBe(2)
+      expect(msgs[0].msg).toBe('test')
+      expect(msgs[1].msg).toBe('hi hi test')
+    })
+
+    it('removes messages after reading', () => {
+      Tabs.messagesRead(2)
+      expect(Tabs.messages.length).toBe(4)
+      Tabs.messagesRead(1233)
+      expect(Tabs.messages.length).toBe(4)
+      Tabs.messagesRead(3)
+      expect(Tabs.messages.length).toBe(3)
+      Tabs.messagesRead(8)
+      expect(Tabs.messages.length).toBe(2)
+
+      expect(Tabs.messages[0].id).toBe(1)
+      expect(Tabs.messages[1].id).toBe(5)
+    })
+  })
+
+  describe('messagesAdd', () => {
+    it('adds message to messages', () => {
+      Tabs.messagesAdd(4, 'status', 'hi hi')
+      expect(Tabs.messages.length).toBe(1)
+      Tabs.messagesAdd(4, 'status', 'hi hi2')
+      expect(Tabs.messages.length).toBe(2)
+      expect(Tabs.messages[1]).toEqual({ id: 4, type: 'status', msg: 'hi hi2' })
+    })
+  })
+
   describe('_findIndexById', () => {
     it('returns undefined if nothing found', () => {
       const idx = Tabs._findIndexById(2)
@@ -37,6 +81,54 @@ describe('TabState', () => {
       idx = Tabs._findIndexById(5)
       expect(idx).toEqual(4)
       expect(Tabs.state[4].id).toEqual(5)
+    })
+  })
+
+  describe('_refreshFiles', () => {
+    it('diffs the current state to figure out files that need to be refreshed', (done) => {
+      let count = 0
+      Tabs.onRefresh = (files) => {
+        count += 1
+        if (count == 3) {
+          expect(files.length).toBe(1)
+          expect(files[0]).toBe('/test/path/test.css')
+          done()
+        } else if (count == 2) {
+          expect(files.length).toBe(2)
+        } else {
+          expect(files.length).toBe(0)
+        }
+      }
+
+      const testData = { action: {
+        filePath: '/test/path',
+        actions: [
+          { file: 'test.js' },
+          { file: 'test.css' }
+        ]
+      }}
+
+      Tabs.state = []
+      Tabs._refreshFiles(testData)
+
+      Tabs.state = [testData]
+      Tabs._refreshFiles(testData)
+
+      Tabs.state = [
+        { action: { filePath: '/test/path',
+          actions: [
+            { file: 'test1.js' },
+            { file: 'test1.css' } ]}},
+        { action: { filePath: '/test/path',
+          actions: [
+            { file: 'test.css' } ]}},
+        { action: { filePath: '/test/path',
+          actions: [
+            { file: 'test2.js' },
+            { file: 'test2.css' } ]}}
+      ]
+
+      Tabs._refreshFiles(testData)
     })
   })
 
@@ -70,6 +162,15 @@ describe('TabState', () => {
         done()
       }
       Tabs.removeState(2)
+    })
+
+    it('removes any messages for the tabId', () => {
+      Tabs.state = [{id: 1}, {id: 2}, {id: 3}]
+      Tabs.messages = [{id:2},{id:1},{id:1},{id:3}]
+      Tabs.removeState(2)
+      expect(Tabs.messages.length).toBe(3)
+      Tabs.removeState(1)
+      expect(Tabs.messages.length).toBe(1)
     })
   })
 

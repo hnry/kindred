@@ -35,6 +35,14 @@ const sync = (state, msg) => {
   })
 }
 
+function onRefresh(files) {
+  if (native.port == null) {
+    return
+  }
+  const payload = { type: 'refresh', files }
+  native.send(payload)
+}
+
 /**
  * Handler passed to TabState on initiation
  * called everytime there are changes
@@ -49,8 +57,8 @@ const sync = (state, msg) => {
  *
  * Access: r TabState, native
  */
-function onChange(native, Tabs, state) {
-  const payload = { files: Tabs.renderFiles() }
+function onChange(Tabs, state) {
+  const payload = { type: 'read', files: Tabs.renderFiles() }
   if (payload.files.length === 0) {
     if (native.port != null) {
       native.port.disconnect() // exits native

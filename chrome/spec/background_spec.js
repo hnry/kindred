@@ -241,7 +241,7 @@ describe('background', () => {
         }
       }
 
-      background.onChange(background.native, Tabs, Tabs.state)
+      background.onChange(Tabs, Tabs.state)
 
       expect(dcCalled).toEqual(true)
       expect(background.native.port).toEqual(null)

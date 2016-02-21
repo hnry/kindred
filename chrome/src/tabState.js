@@ -88,7 +88,7 @@ class TabState {
       }).length
     })
 
-    this.onRefresh(r)
+    if (r.length) this.onRefresh(r);
   }
 
   addState(tabData) {

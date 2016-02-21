@@ -89,14 +89,12 @@ describe('TabState', () => {
       let count = 0
       Tabs.onRefresh = (files) => {
         count += 1
-        if (count == 3) {
+        if (count == 2) {
           expect(files.length).toBe(1)
           expect(files[0]).toBe('/test/path/test.css')
           done()
-        } else if (count == 2) {
+        } else if (count == 1) {
           expect(files.length).toBe(2)
-        } else {
-          expect(files.length).toBe(0)
         }
       }
 

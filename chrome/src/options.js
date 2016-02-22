@@ -128,6 +128,7 @@ class Input extends React.Component {
     super()
     this.state = { error: '' }
     this.onChange = this.onChange.bind(this)
+    this.validateOnBlur = this.validateOnBlur.bind(this)
 
     this.error = ''
     this.changed = false
@@ -157,14 +158,30 @@ class Input extends React.Component {
     this.setState({ error: err })
   }
 
-  validate(v, cb) {
-    v = typeof v === 'undefined' ? this.props.value : v;
-    cb = typeof cb === 'undefined' ? function() {} : cb;
+  validateOnBlur() {
+    const v = this.props.value
+    let err
+
+    if (this.props.minLength && !this.error && v && parseInt(this.props.minLength) > v.length) {
+      err = 'Too short.'
+      this.setError(err)
+      return
+    }
+  }
+
+  validate(v=this.props.value, cb=function(){}) {
     let err = ''
 
     if (this.props.required && !err && v == '') {
       err = 'Cannot be empty.'
       this.setError(err)
+      cb(err)
+      return
+    }
+
+    if (this.props.minLength && !err && v && parseInt(this.props.minLength) > v.length && this.error == 'Too short.') {
+      err = 'Too short.'
+      //this.setError(err)
       cb(err)
       return
     }
@@ -210,7 +227,7 @@ class Input extends React.Component {
       <label htmlFor={'input-'+key+ htmlName}>{this.props.label}</label>
       <div className='input-desc'>{this.props.desc}</div>
       <div className='form-error'>{this.state.error}</div>
-      <input className={this.props.className} id={'input-'+key+htmlName} type="text" value={this.props.value} onChange={this.onChange} />
+      <input className={this.props.className} id={'input-'+key+htmlName} type="text" value={this.props.value} onChange={this.onChange} onBlur={this.validateOnBlur} />
     </div>)
   }
 }
@@ -431,8 +448,8 @@ class Form extends React.Component {
     return (<div className={'form' + isSelected()}>
       <Input className='input-name' label='Name' value={this.state.action.name} onChange={this.changeName} required unique />
       <Input label='Folder Path' value={this.state.action.filePath} onChange={this.changeFilePath} required  desc='The folder containing files to bind (must be absolute path)' />
-      <Input label='URL' value={this.state.action.url} onChange={this.changeUrl}  desc='(Optional) For visually associating a web site with kindred' />
-      <Input label='Action URL' value={this.state.action.actionUrl} onChange={this.changeActionUrl} required  desc='The URL (or Regxp) to start scanning for actions you have created' />
+      <Input label='URL' value={this.state.action.url} onChange={this.changeUrl} minLength='8' desc='(Optional) For visually associating a web site with kindred' />
+      <Input label='Action URL' value={this.state.action.actionUrl} onChange={this.changeActionUrl} minLength='8' required  desc='The URL (or Regxp) to start scanning for actions you have created' />
 
       {this.renderActions()}
 

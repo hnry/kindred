@@ -1,13 +1,7 @@
 import React from 'react'
 import {shallow, mount} from 'enzyme'
-import TestUtils from 'react-addons-test-utils';
 
 const {Form, Input} = require('../../src/options.js')
-
-function typing(node, str) {
-  node.value = str
-  TestUtils.Simulate.change(node)
-}
 
 describe('Form', () => {
 
@@ -135,6 +129,7 @@ describe('Form', () => {
 
   // TODO tricky test...
   it('onSave() new with empty fields should fail', (done) => {
+    pending('this test needs improvement')
     const f = mount(<Form action='new' selected={true} />)
 
     global.chrome.storage.sync.set = () => {
@@ -165,27 +160,28 @@ describe('Form', () => {
     }, 10)
   })
 
-  it('successful onSave() new resets new form', (done) => {
+  it('successful onSave() new action resets "new form"', (done) => {
     const f = mount(<Form action='new' selected={true} />)
 
     // fill form to be valid
     f.find('input').forEach((i) => {
-      typing(i.get(0), 'test')
+      typing(i.get(0), 'test12345')
     })
 
+    // name
     const input = f.find('input').get(0)
 
-    global.chrome.storage.sync.set = () => {
-      f.find('input').forEach((i) => {
-        expect(i.get(0).value).not.toBe('test')
-      })
-      done()
-    }
-
     setTimeout(() => {
-      expect(input.value).toBe('test')
+      expect(input.value).toBe('test12345')
       f.get(0).onSave()
-    }, 10)
+
+      setTimeout(() => {
+        f.find('input').forEach((i) => {
+          expect(i.get(0).value).not.toBe('test12345')
+        })
+        done()
+      }, 1)
+    }, 1)
   })
 
   it('successful onRemove() rule resets to new form', (done) => {

@@ -10,7 +10,7 @@ global.defaultActions = require('./actions')
 global.chrome = {
   storage: {
     sync: {
-      set: function() { console.log('save') },
+      set: function() { },
       get: function(options, cb) {
         // simulate async in looking up storage
         setTimeout(function() {
@@ -24,3 +24,10 @@ global.chrome = {
 // react
 global.React = require('react')
 global.ReactDOM = require('react-dom')
+
+var TestUtils = require('react-addons-test-utils')
+
+global.typing = (node, str) => {
+  node.value = str
+  TestUtils.Simulate.change(node)
+}

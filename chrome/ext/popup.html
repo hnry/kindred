@@ -6,40 +6,101 @@
     body {
       font-family: 'Helvetica Neue', Helvetica, Arial, Tahoma, sans-serif;
       font-size: 100%;
-      margin: 0;
       background-color: rgb(95, 116, 143);
       color: #ddd;
+      margin: 0;
+      min-width: 150px;
+    }
+    #content {
+      margin: 0 10px 10px 10px;
+    }
+    .hdr {
+      background-color: rgb(216, 227, 218);
+      padding: 5px;
+      margin-bottom: 5px;
+      color: #000;
+      font-weight: bold;
+      text-align: center;
+      box-shadow: 1px -1px 20px rgb(170, 182, 173);
+    }
+    .label {
+      font-size: 0.75em;
+      color: #000;
+      padding: 2px;
+      font-weight: bold;
+      background-color: rgb(93,141,190);
+    }
+    .rule {
+      padding: 2px;
+      font-size: 0.85em;
+      margin: 10px 0 10px 0;
+    }
+    .value {
+      margin-top: 5px;
+      border-bottom: 2px rgb(103, 156, 210) solid;
+    }
+    .value-error {
+      margin-top: 5px;
+      border-bottom: 2px rgb(235, 229, 246) solid;
+    }
+    #action-name {
+      font-size: 1.2em;
+    }
+    #files, #status {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 0.9em;
+    }
+    .errors {
+      background-color: rgb(192, 180, 218);
+    }
+    .default-hidden {
+      display: none;
     }
   </style>
 </head>
 <body>
 
-kindred
+<div id='debug'></div>
 
-<hr />
-<div id='tab'></div>
+<div class='hdr'>kindred</div>
 
-<hr />
-<div id='action-name'></div>
+<div id='content'>
+  <div class='rule'>
+    <span class='label'>Active Rule</span>
+    <br />
+    <div id='action-name' class='value'></div>
+  </div>
 
-<hr />
-<!-- list of files kindred is looking for -->
-<div id='files'></div>
+  <div id='no-actions' class='rule'>
+    <center><small>
+      Active, waiting for actions to trigger
+    </small></center>
+  </div>
 
-<hr />
-<!--
-list of status msgs or errors:
-// status
-- confirmation that files are ok (connected / being read)
-- confirmation if page is not actionable or actionable
+  <!-- list of files kindred is looking for -->
+  <div id='files-div' class='rule default-hidden'>
+    <span class='label'>Reading Files</span>
+    <br />
+    <div id='files' class='value'></div>
+  </div>
 
-// errors
-- native is not connecting
-- a specific file doesn't exist or error reading
-- error trying to find action Element name or edit
--->
-<div id='status'></div>
+  <!--
+  list of status msgs or errors:
+  // status
+  - confirmation that files are ok (connected / being read)
+  - confirmation if page is not actionable or actionable
 
+  // errors
+  - native is not connecting
+  - a specific file doesn't exist or error reading
+  - error trying to find action Element name or edit
+  -->
+  <div id='status-div' class='rule default-hidden'>
+    <span class='label errors'>Errors</span>
+    <br />
+    <div id='status' class='value-error'></div>
+  </div>
+</div>
 <script src="popup.js"></script>
 </body>
 </html>

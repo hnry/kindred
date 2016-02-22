@@ -1,3 +1,4 @@
 node_modules
 native/native
 chrome/ext/*.js
+TODO.md

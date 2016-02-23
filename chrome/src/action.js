@@ -3,13 +3,22 @@ console.log('kindred extension loaded');
 function kindredName(tab, actions) {
   var names = actions.reduce(function(tmpNames, action) {
     var n = $(action.actionElementName)[0];
-    var nText = $(n).text() || n.innerHTML;
+    var tag = $(n).prop('tagName')
+
+    var nText;
+    switch(tag.toLowerCase()) {
+      case 'input':
+        nText = $(n).val();
+        break;
+      default:
+        nText = $(n).text() || $(n).innerHTML;
+    }
 
     var invalid = action.actionInvalidNames.filter(function(i) {
       return i == nText
     });
 
-    if (invalid.length === 0) {
+    if (invalid.length === 0 && nText !== '') {
       tmpNames.push(nText)
     }
 

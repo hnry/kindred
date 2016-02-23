@@ -172,7 +172,7 @@ class Input extends React.Component {
   validate(v=this.props.value, cb=function(){}) {
     let err = ''
 
-    if (this.props.required && !err && v == '') {
+    if (this.props.required && !err && v.trim() == '') {
       err = 'Cannot be empty.'
       this.setError(err)
       cb(err)

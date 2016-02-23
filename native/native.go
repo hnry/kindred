@@ -84,6 +84,7 @@ func (fl *fileList) ReadAll() {
 
 		fdata, err := f.Read()
 		if err != nil {
+			f.Error = err
 			debug("File:", f.File)
 			debug("fileInfo#Read error:", err)
 
@@ -93,10 +94,6 @@ func (fl *fileList) ReadAll() {
 				debug(err)
 			}
 			output(os.Stdout, outJSON)
-			continue
-		}
-
-		if fdata == nil {
 			continue
 		}
 
@@ -122,9 +119,6 @@ type fileInfo struct {
 // to easier set fileInfo.Error
 func (f *fileInfo) Read() ([]byte, error) {
 	data, err := f._Read()
-	if err != nil {
-		f.Error = err
-	}
 	return data, err
 }
 

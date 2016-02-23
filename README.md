@@ -1,6 +1,4 @@
-Chrome extension to use _any_ text editor for _any_ website
-
-Personally I use it for editing code (as opposed to using a website's web based editor). Could use it for other things like blogging, etc.
+Chrome extension to use _any_ text editor for editable content on _any_ website
 
 ![kindred](../screenshot/screenshot.gif "kindred")
 

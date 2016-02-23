@@ -106,6 +106,14 @@ class TabState {
   }
 
   addState(tabData) {
+    // fix all possible pathing issues here TODO
+    if (tabData.action && tabData.action.filePath) {
+      const path = tabData.action.filePath
+      if (path[path.length - 1] !== '/') {
+        tabData.action.filePath = path + '/'
+      }
+    }
+
     // figure out if any files need refreshing
     this._refreshFiles(tabData)
 
@@ -167,11 +175,6 @@ class TabState {
 
       if (!path) {
           return files
-      }
-
-      // fix all possible pathing issues here TODO
-      if (path[path.length - 1] !== '/') {
-        path = path + '/'
       }
 
       const f = tab.action.actions.reduce((newF, a) => {

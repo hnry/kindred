@@ -111,7 +111,7 @@ describe('TabState', () => {
       }
 
       const testData = { action: {
-        filePath: '/test/path',
+        filePath: '/test/path/',
         actions: [
           { file: 'test.js' },
           { file: 'test.css' }
@@ -125,14 +125,14 @@ describe('TabState', () => {
       Tabs._refreshFiles(testData)
 
       Tabs.state = [
-        { action: { filePath: '/test/path',
+        { action: { filePath: '/test/path/',
           actions: [
             { file: 'test1.js' },
             { file: 'test1.css' } ]}},
-        { action: { filePath: '/test/path',
+        { action: { filePath: '/test/path/',
           actions: [
             { file: 'test.css' } ]}},
-        { action: { filePath: '/test/path',
+        { action: { filePath: '/test/path/',
           actions: [
             { file: 'test2.js' },
             { file: 'test2.css' } ]}}

@@ -24,7 +24,7 @@ describe('TabState', () => {
     Tabs = new TabState()
   })
 
-  describe('messagesRead', () => {
+  describe('messages', () => {
     beforeEach(() => {
       Tabs.messages = [
         {id: 1, msg: 'hi hi'},
@@ -36,25 +36,28 @@ describe('TabState', () => {
       ]
     })
 
-    it('reads messages', () => {
+    it('messagesRead - reads messages', () => {
       const msgs = Tabs.messagesRead(2)
       expect(msgs.length).toBe(2)
       expect(msgs[0].msg).toBe('test')
       expect(msgs[1].msg).toBe('hi hi test')
     })
 
-    it('removes messages after reading', () => {
+    it('messagesRead - does not remove messages when read', () => {
       Tabs.messagesRead(2)
-      expect(Tabs.messages.length).toBe(4)
+      expect(Tabs.messages.length).toBe(6)
       Tabs.messagesRead(1233)
-      expect(Tabs.messages.length).toBe(4)
-      Tabs.messagesRead(3)
-      expect(Tabs.messages.length).toBe(3)
-      Tabs.messagesRead(8)
-      expect(Tabs.messages.length).toBe(2)
+      expect(Tabs.messages.length).toBe(6)
+    })
 
-      expect(Tabs.messages[0].id).toBe(1)
-      expect(Tabs.messages[1].id).toBe(5)
+    it('messagesClear - removes messages for tab id', () => {
+      expect(Tabs.messages.length).toBe(6)
+      Tabs.messagesClear(2)
+      expect(Tabs.messages.length).toBe(4)
+      Tabs.messagesClear(1234)
+      expect(Tabs.messages.length).toBe(4)
+      Tabs.messagesClear(3)
+      expect(Tabs.messages.length).toBe(3)
     })
   })
 
@@ -65,6 +68,15 @@ describe('TabState', () => {
       Tabs.messagesAdd(4, 'status', 'hi hi2')
       expect(Tabs.messages.length).toBe(2)
       expect(Tabs.messages[1]).toEqual({ id: 4, type: 'status', msg: 'hi hi2' })
+    })
+
+    it('does not add duplicate messages', () => {
+      Tabs.messagesAdd(4, 'status', 'hi hi')
+      Tabs.messagesAdd(4, 'status', 'hi hi')
+      Tabs.messagesAdd(4, 'status', 'hi hi')
+      Tabs.messagesAdd(4, 'status', 'hi hi2')
+      Tabs.messagesAdd(4, 'status', 'hi hi2')
+      expect(Tabs.messages.length).toBe(2)
     })
   })
 
@@ -131,6 +143,17 @@ describe('TabState', () => {
   })
 
   describe('addState', () => {
+    it('clears messages for tab id', () => {
+      Tabs.messages = [
+        {id: 2, msg: 'hi'},
+        {id: 3, msg: 'hi'},
+        {id: 22, msg: 'hi'},
+        {id: 2, msg: 'hi'}
+      ]
+      Tabs.addState({id: 2})
+      expect(Tabs.messages.length).toBe(2)
+    })
+
     it('creates a new tab state if existing state not found', () => {
       expect(Tabs.state[0]).toBeUndefined()
       Tabs.addState({id: 2, test: 'néw'})

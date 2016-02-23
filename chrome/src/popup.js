@@ -52,8 +52,8 @@ function init(tab) {
     // any error msgs associated tab
     const wrapper = document.getElementById('status-div')
     wrapper.className = 'rule'
-    Tabs.messagesRead(tabId).forEach((msg) => {
-      elementAppend('status', msg)
+    msgs.forEach((msg) => {
+      elementAppend('status', msg.msg)
     })
   }
 }

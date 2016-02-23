@@ -12,6 +12,11 @@ const native = {
   }
 }
 
+function err(tabId, errMsg) {
+  Tabs.messagesAdd(tabId, 'error', errMsg)
+  chrome.pageAction.setIcon({tabId, path: 'error.png'})
+}
+
 /**
  * native incoming message handler
  * for handling file data
@@ -24,12 +29,16 @@ const native = {
  *
  * Access: r TabState, native
  */
-const sync = (state, msg) => {
+function sync(state, msg) {
   state.forEach((tabData) => {
     const path = tabData.action.filePath
     tabData.action.actions.forEach((a) => {
       if (path + a.file === msg.file) {
-        chrome.tabs.sendMessage(tabData.id, { type: 'edit', selector: a.actionElementEdit, text: msg.data})
+        if (msg.error) {
+          err(tabData.id, msg.error)
+        } else if (msg.data) {
+          chrome.tabs.sendMessage(tabData.id, { type: 'edit', selector: a.actionElementEdit, text: msg.data})
+        }
       }
     })
   })
@@ -118,8 +127,7 @@ function _makeTabData(id, tab, action, actionable) {
     })
   } else {
     if (actionable) {
-      Tabs.messagesAdd(id, 'error', 'No file path set')
-      chrome.pageAction.setIcon({tabId: id, path: 'error.png'})
+      err(id, 'No file path set')
     }
     addTab({ tab: t })
   }

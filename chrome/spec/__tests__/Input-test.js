@@ -38,7 +38,7 @@ describe('Input', () => {
         minLength: c.props.minLength,
         onChange: this.onChange.bind(this)
       }
-      return (<div>{r}></div>)
+      return (<div>{r}</div>)
     }
   }
 

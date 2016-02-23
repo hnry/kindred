@@ -31,11 +31,7 @@ class TabState {
     this.messages.forEach((message, idx) => {
       if (message.id == tabId) {
         r.push(message)
-        this.messages[idx] = null
       }
-    })
-    this.messages = this.messages.filter((msg, idx) => {
-      return msg !== null
     })
     return r
   }
@@ -47,7 +43,25 @@ class TabState {
    * @param  {String} msg   message
    */
   messagesAdd(tabId, type, msg) {
-    this.messages.push({ id: tabId, type, msg })
+    const dup = this.messages.filter((message) => {
+      if (message.id == tabId && message.msg == msg) {
+        return true
+      }
+      return false
+    })
+
+    if (!dup.length) this.messages.push({ id: tabId, type, msg });
+  }
+
+  messagesClear(tabId) {
+    this.messages.forEach((msg, idx) => {
+      if (msg.id == tabId) {
+        this.messages[idx] = null
+      }
+    })
+    this.messages = this.messages.filter((msg) => {
+      return msg !== null
+    })
   }
 
   /**
@@ -92,12 +106,14 @@ class TabState {
   }
 
   addState(tabData) {
+    // figure out if any files need refreshing
+    this._refreshFiles(tabData)
+
     const idx = this._findIndexById(tabData.id)
     this._willChangeState()
 
+    this.messagesClear(tabData.id)
     if (idx !== undefined) {
-      // figure out if any files need refreshing
-      this._refreshFiles(tabData)
       this.state[idx] = tabData
     } else {
       this.state.push(tabData)
@@ -112,7 +128,7 @@ class TabState {
       this._willChangeState()
 
       this.state.splice(idx, 1)
-      this.messagesRead(tabId)
+      this.messagesClear(tabId)
 
       this._changedState()
     }

@@ -8,11 +8,17 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"sync"
 	"time"
 )
 
 func debug(v ...interface{}) {
-	log.Println("pid:", os.Getpid(), v)
+	log.Println("kindred | pid:", os.Getpid(), v)
+}
+
+type inputJSON struct {
+	Type  string   `json:"type"`
+	Files []string `json:"files"`
 }
 
 type outputJSON struct {
@@ -20,25 +26,55 @@ type outputJSON struct {
 	Data string `json:"data"`
 }
 
+type outputErrJSON struct {
+	File  string `json:"file"`
+	Error string `json:"error"`
+}
+
 type fileList struct {
+	Mutex *sync.Mutex
 	Files []*fileInfo
+}
+
+func (fl *fileList) Refresh(refresh []string) {
+	debug("Refreshing files...", refresh)
+
+	fl.Mutex.Lock()
+	for _, ref := range refresh {
+		for _, f := range fl.Files {
+			if f.File == ref {
+				f.ReadModTime = time.Time{}
+				f.Error = nil
+			}
+		}
+	}
+	fl.Mutex.Unlock()
 }
 
 func (fl *fileList) Update(files []string) {
 	debug("Updating with...", files)
+
+	fl.Mutex.Lock()
 	var newFiles []*fileInfo
 	for _, f := range files {
 		file := fileInfo{File: f}
-		// TODO check if file is already known
-		// copy over ReadModTime if so
-		// this is to optimize 1 less read per file
+
+		// copy over ReadModTime
+		for _, currentFile := range fl.Files {
+			if currentFile.File == file.File {
+				file.ReadModTime = currentFile.ReadModTime
+			}
+		}
+
 		newFiles = append(newFiles, &file)
 	}
 
 	fl.Files = newFiles
+	fl.Mutex.Unlock()
 }
 
 func (fl *fileList) ReadAll() {
+	fl.Mutex.Lock()
 	for _, f := range fl.Files {
 		// if a file had an error previously, do not try to read again
 		// this is not permanent, as Update() will clear the error
@@ -50,8 +86,14 @@ func (fl *fileList) ReadAll() {
 		if err != nil {
 			debug("File:", f.File)
 			debug("fileInfo#Read error:", err)
+
+			outerr := outputErrJSON{File: f.File, Error: err.Error()}
+			outJSON, err := json.Marshal(outerr)
+			if err != nil {
+				debug(err)
+			}
+			output(os.Stdout, outJSON)
 			continue
-			// TODO should do something with errors, like sending it back to chrome
 		}
 
 		if fdata == nil {
@@ -67,6 +109,7 @@ func (fl *fileList) ReadAll() {
 		}
 		output(os.Stdout, outj)
 	}
+	fl.Mutex.Unlock()
 }
 
 type fileInfo struct {
@@ -85,9 +128,6 @@ func (f *fileInfo) Read() ([]byte, error) {
 	return data, err
 }
 
-// TODO be able to detect minor file path errors
-// e.g. file path might be /path/filename.txt but no file exists
-// should then test maybe the path is actually /path/filename/filename.txt
 func (f *fileInfo) _Read() ([]byte, error) {
 	file, err := os.Open(f.File)
 	if err != nil {
@@ -179,12 +219,17 @@ func readStdin(fList *fileList) {
 	for {
 		_, msg := input(os.Stdin)
 		if msg != nil {
-			files := make(map[string][]string)
-			err := json.Unmarshal(msg, &files)
+			req := inputJSON{}
+			err := json.Unmarshal(msg, &req)
 			if err != nil {
 				debug(err)
 			}
-			fList.Update(files["files"])
+
+			if req.Type == "read" {
+				fList.Update(req.Files)
+			} else if req.Type == "refresh" {
+				fList.Refresh(req.Files)
+			}
 		}
 	}
 }
@@ -192,12 +237,12 @@ func readStdin(fList *fileList) {
 func main() {
 	debug("kindred native started.")
 
-	fList := &fileList{}
+	fList := &fileList{Mutex: &sync.Mutex{}}
 
 	go readStdin(fList)
 
 	for {
 		fList.ReadAll()
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(300 * time.Millisecond)
 	}
 }

@@ -14,16 +14,17 @@ var defaultActions = [
     ]
   },
   {
-    name: 'Test action 2',
-    url: 'http://example.com',
-    actionUrl: 'http://example.com/test',
+    name: 'Quantopian',
+    url: 'https://www.quantopian.com/',
+    actionUrl: 'https://www.quantopian.com/algorithms',
+    filePath: '',
     actions: [
       {
-        actionElementEdit: '',
-        actionElementName: '',
-        actionInvalidNames: ['yea', 'what'],
+        actionElementEdit: '.CodeMirror',
+        actionElementName: '#subnav input',
+        actionInvalidNames: [],
         namePrefix: '',
-        nameSuffix: ''
+        nameSuffix: '.py'
       }
     ]
   }

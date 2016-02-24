@@ -4,9 +4,9 @@
   "description": "(chrome extension) use your editor instead of a web editor",
   "main": "index.js",
   "dependencies": {
-    "jquery": "^2.2.0",
     "react": "^0.14.7",
-    "react-dom": "^0.14.7"
+    "react-dom": "^0.14.7",
+    "sizzle": "^2.3.0"
   },
   "devDependencies": {
     "babel-cli": "^6.4.5",

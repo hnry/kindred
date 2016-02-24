@@ -120,7 +120,7 @@ function _makeTabData(id, tab, action, actionable) {
   if (actionable && action.filePath) {
     t.action.filePath = action.filePath
 
-    chrome.tabs.executeScript(id, {file: 'jquery.js'}, () => {
+    chrome.tabs.executeScript(id, {file: 'sizzle.js'}, () => {
       chrome.tabs.executeScript(id, {file: 'action.js'}, () => {
         chrome.tabs.sendMessage(id, { type: 'name', tab: t, actions: action.actions })
       })

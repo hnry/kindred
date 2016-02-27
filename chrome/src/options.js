@@ -375,6 +375,15 @@ class Form extends React.Component {
     this.runValidators(() => {
       const action = this.state.action
       if (this.isValid()) {
+        
+        // convert invalid names to array
+        if (action.actions) {
+          action.actions.forEach((a, idx) => {
+            a.actionInvalidNames = a.actionInvalidNames.split(',')
+            action.actions[idx] = a
+          })
+        }
+
         if (this.props.action === 'new') {
           Store.save(action)
           this.resetForm()

@@ -20,7 +20,7 @@ var defaultActions = [
     filePath: '',
     actions: [
       {
-        actionElementEdit: '.CodeMirror',
+        actionElementEdit: '.CodeMirror textarea',
         actionElementName: '#subnav input',
         actionInvalidNames: [],
         namePrefix: '',

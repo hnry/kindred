@@ -160,6 +160,49 @@ describe('Form', () => {
     }, 10)
   })
 
+  it('onSave() saves Invalid Names field from string to array', (done) => {
+    const f = mount(<Form action='new' selected={true} />)
+    const btn = f.find('button').first()
+    btn.simulate('click')
+
+    const inputs = f.find('input')
+    expect(inputs.length).toBe(9)
+
+    // fill form to make it valid
+    f.find('input').forEach((i) => {
+      typing(i.get(0), 'zzzzz12345')
+    })
+
+    const backupSet = chrome.storage.sync.set
+    chrome.storage.sync.set = (saveData) => {
+      // there are 3 test actions, so this 'new' form
+      // is the 4th
+      expect(saveData.actions[3]).toEqual({
+        name: 'zzzzz12345',
+        url: 'zzzzz12345',
+        actionUrl: 'zzzzz12345',
+        filePath: 'zzzzz12345',
+        actions: [{
+          actionElementEdit: 'zzzzz12345',
+          actionElementName: 'zzzzz12345',
+          actionInvalidNames: ['zzzzz12345'],
+          namePrefix: 'zzzzz12345',
+          nameSuffix: 'zzzzz12345'
+        }]
+      })
+      // reset set to previous
+      chrome.storage.sync.set = backupSet 
+      done()
+    }
+
+    // stop setState in this fn
+    // causes issues where it runs setState when the test
+    // has already unmounted component
+    f.get(0).resetForm = () => {}
+    
+    f.get(0).onSave()
+  })
+
   it('successful onSave() new action resets "new form"', (done) => {
     const f = mount(<Form action='new' selected={true} />)
 

@@ -107,6 +107,13 @@ function addTab(data) {
   chrome.pageAction.show(data.tab.id)
 }
 
+/**
+ * final step for collecting data to make a TabData
+ * @param  {Number} id         tab id
+ * @param  {Object} tab        [description]
+ * @param  {Object} action     [description]
+ * @param  {Boolean} actionable if the URL is an actionUrl
+ */
 function _makeTabData(id, tab, action, actionable) {
   const t = {
     id: id,
@@ -119,6 +126,15 @@ function _makeTabData(id, tab, action, actionable) {
 
   if (actionable && action.filePath) {
     t.action.filePath = action.filePath
+
+    if (action.actions) {
+      action.actions.forEach((a, idx) => {
+        if (typeof a.actionInvalidNames === 'string') {
+          a.actionInvalidNames = a.actionInvalidNames.split(',')
+          action.actions[idx] = a
+        }
+      })
+    }
 
     chrome.tabs.executeScript(id, {file: 'sizzle.js'}, () => {
       chrome.tabs.executeScript(id, {file: 'action.js'}, () => {

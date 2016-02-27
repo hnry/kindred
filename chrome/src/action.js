@@ -1,19 +1,17 @@
-console.log('kindred extension loaded');
-
 var codepacks = {
   codemirror: {
     detect: function(el) {
       // scan for CodeMirror container
       // and if `el` is inside container then it is CodeMirror
-      // 
-      // TODO this doesn't work well if there are 2+ CodeMirrors on the page
       var result;
       var codemirror = Sizzle('.CodeMirror');
+      var index = 0;
       if (codemirror.length) {
-        var result = codemirror.some(function(cmEl) {
+        var result = codemirror.some(function(cmEl, idx) {
           var n = el.parentNode;
           while (n !== null) {
             if (n === cmEl) {
+              index = idx;
               return true;
             }
             n = n.parentNode;
@@ -23,7 +21,7 @@ var codepacks = {
       }
 
       if (result) {
-        return { name: 'codemirror', run: this.runner.bind(undefined, codemirror[0]) };
+        return { name: 'codemirror', run: this.runner.bind(undefined, codemirror[index]) };
       }
     },
     runner: function(el, text) {
@@ -31,6 +29,7 @@ var codepacks = {
       // with it through the DOM, so resorting to this...
       // 
       // Cannot use select all keyboard event because of Chrome bug
+      // https://bugs.chromium.org/p/chromium/issues/detail?id=589339
       // 
       // Simulate mouse wheel up to "reset" back to 0 position
       // Then mouse drag downward to simulate select all
@@ -79,30 +78,38 @@ var codepacks = {
         }, stepsDelay);
       }
 
-      // simulate mouse wheel to scroll up for 'reset' at line 1
-      for (var i = 0; i < 20; i ++) {
-        var step = i;
-        if (step >= 10) {  // decelerate at half way point
-          step = 20 - step;
+
+      function mouseWheel() {
+        // simulate mouse wheel to scroll up for 'reset' at line 1
+        for (var i = 0; i < 20; i ++) {
+          var step = i;
+          if (step >= 10) {  // decelerate at half way point
+            step = 20 - step;
+          }
+          mouse(elScroll, 'mousewheel', 0, 10 * step);
         }
-        mouse(elScroll, 'mousewheel', 0, 10 * step);
       }
 
-      // simulate mouse drag to select all
-      mouseDrag({
-        count: 0,
-        x: 1,
-        y: 1,
-        stepX: 200,
-        stepY: 200
-      }, function() {
-        // finally send text input
-        var event = new KeyboardEvent('keydown');
-        el.dispatchEvent(event)
-        el.value = text;
-        var event = new Event('input');
-        el.dispatchEvent(event);
-      });
+      // delay start up for less than a sec to let browser finish loading
+      // it's buggy in that any lag will make things weird
+      setTimeout(function() {
+        mouseWheel();
+        // simulate mouse drag to select all
+        mouseDrag({
+          count: 0,
+          x: 1,
+          y: 1,
+          stepX: 200,
+          stepY: 200
+        }, function() {
+          // finally send text input
+          var event = new KeyboardEvent('keydown');
+          el.dispatchEvent(event)
+          el.value = text;
+          var event = new Event('input');
+          el.dispatchEvent(event);
+        });
+      }, 300);
     }
   }
 }
@@ -133,17 +140,17 @@ function kindredName(tab, actions) {
   }, []);
 
   // all or nothing, either all names get matched
-  // or it starts over
+  // or it starts over after 1 sec
   if (names.length !== actions.length) {
     window.setTimeout(function() {
       kindredName(tab, actions)
-    }, 1000)
+    }, 1000);
   } else {
     chrome.runtime.sendMessage({
       tab: tab,
       actions: actions,
       names: names
-    })
+    });
   }
 }
 
@@ -181,6 +188,7 @@ function kindredEdit(selector, text) {
   }
 }
 
+console.log('kindred extension loaded');
 chrome.runtime.onMessage.addListener(function(msg, sender, reply) {
   switch(msg.type) {
     case 'name':

@@ -27,12 +27,12 @@ describe('TabState', () => {
   describe('messages', () => {
     beforeEach(() => {
       Tabs.messages = [
-        {id: 1, msg: 'hi hi'},
-        {id: 2, msg: 'test'},
-        {id: 2, msg: 'hi hi test'},
-        {id: 3, msg: 'hi hi'},
-        {id: 5, msg: 'hi hi'},
-        {id: 8, msg: 'hi hi'}
+        {id: 1, type: 'x', msg: 'hi hi'},
+        {id: 2, type: 'x', msg: 'test'},
+        {id: 2, type: 'x', msg: 'hi hi test'},
+        {id: 3, type: 'x', msg: 'hi hi'},
+        {id: 5, type: 'x', msg: 'hi hi'},
+        {id: 8, type: 'x', msg: 'hi hi'}
       ]
     })
 
@@ -63,19 +63,19 @@ describe('TabState', () => {
 
   describe('messagesAdd', () => {
     it('adds message to messages', () => {
-      Tabs.messagesAdd(4, 'status', 'hi hi')
+      Tabs.messagesAdd(4, {type: 'status', msg:'hi hi'})
       expect(Tabs.messages.length).toBe(1)
-      Tabs.messagesAdd(4, 'status', 'hi hi2')
+      Tabs.messagesAdd(4, {type:'status2', msg:'hi hi2'})
       expect(Tabs.messages.length).toBe(2)
-      expect(Tabs.messages[1]).toEqual({ id: 4, type: 'status', msg: 'hi hi2' })
+      expect(Tabs.messages[1]).toEqual({ id: 4, type: 'status2', msg: 'hi hi2' })
     })
 
-    it('does not add duplicate messages', () => {
-      Tabs.messagesAdd(4, 'status', 'hi hi')
-      Tabs.messagesAdd(4, 'status', 'hi hi')
-      Tabs.messagesAdd(4, 'status', 'hi hi')
-      Tabs.messagesAdd(4, 'status', 'hi hi2')
-      Tabs.messagesAdd(4, 'status', 'hi hi2')
+    it('does not add duplicate messages with the same type', () => {
+      Tabs.messagesAdd(4, {type:'status', msg:'hi hi'})
+      Tabs.messagesAdd(4, {type:'status', msg:'hi hi'})
+      Tabs.messagesAdd(4, {type:'status', msg:'hi hi'})
+      Tabs.messagesAdd(4, {type:'status2', msg:'hi hi'})
+      Tabs.messagesAdd(4, {type:'status2', msg:'hi hi'})
       expect(Tabs.messages.length).toBe(2)
     })
   })

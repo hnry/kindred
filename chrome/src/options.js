@@ -379,8 +379,10 @@ class Form extends React.Component {
         // convert invalid names to array
         if (action.actions) {
           action.actions.forEach((a, idx) => {
-            a.actionInvalidNames = a.actionInvalidNames.split(',')
-            action.actions[idx] = a
+            if (typeof a.actionInvalidNames === 'string') {
+              a.actionInvalidNames = a.actionInvalidNames.split(',')
+              action.actions[idx] = a
+            }
           })
         }
 

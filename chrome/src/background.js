@@ -12,8 +12,29 @@ const native = {
   }
 }
 
-function err(tabId, errMsg) {
-  Tabs.messagesAdd(tabId, 'error', errMsg)
+/**
+ * Dispatch error messages to the TabStore
+ * Processes incoming error obj to an error message
+ * 
+ * @param  {Number} tabId  chrome tab id
+ * @param  {Object} e object with error msg type and associated information to error
+ */
+function dispatchErr(tabId, e) {
+  let msg = ''
+  switch(e.err) {
+    case 'NO_FILE_PATH':
+      msg = 'No file path set'
+      break
+    case 'ACTION_NAME_NOT_FOUND':
+      msg = 'Unable to find name from element with selector: ' + e.action
+      break
+    case 'ACTION_EDIT_NOT_FOUND':
+      msg = 'Unable to find editable element with selector: ' + e.action
+      break
+    default:
+      msg = 'Unexpected error occured.'
+  }
+  Tabs.messagesAdd(tabId, { type: e.err, msg })
   chrome.pageAction.setIcon({tabId, path: 'error.png'})
 }
 
@@ -35,9 +56,9 @@ function sync(state, msg) {
     tabData.action.actions.forEach((a) => {
       if (path + a.file === msg.file) {
         if (msg.error) {
-          err(tabData.id, msg.error)
+          dispatchErr(tabData.id, { err: 'NATIVE', msg: msg.error})
         } else if (msg.data) {
-          chrome.tabs.sendMessage(tabData.id, { type: 'edit', selector: a.actionElementEdit, text: msg.data})
+          chrome.tabs.sendMessage(tabData.id, { id: tabData.id, type: 'edit', selector: a.actionElementEdit, text: msg.data})
         }
       }
     })
@@ -90,10 +111,28 @@ function _cmpUrl(url, aUrl) {
   return r.test(url)
 }
 
-// Access: w TabState, chrome
-//
-// data = {tab, actions, names}
+/**
+ * final step to add a tab to TabState
+ * it is either called simply from _makeTabData
+ * in which case data is a simple TabData object
+ *
+ * or it is passed in from content script with actions
+ * evaluated to values
+ *
+ * or it is an error object as a result of content script
+ * unable to evaluate values for the actions
+ * 
+ * also is a handler for content scripts passing msgs
+ * back to background which can include errors
+ *  
+ * @param {Object} data Either an error object or TabData object with content script collected data or simple TabData object 
+ */
 function addTab(data) {
+  if (data.err) {
+    dispatchErr(data.id, data)
+    return
+  }
+
   if (data.names) {
     data.tab.action.actions = data.actions.map((a, idx) => {
       return {
@@ -104,14 +143,18 @@ function addTab(data) {
   }
 
   Tabs.addState(data.tab)
+  chrome.pageAction.setIcon({tabId, path: 'icon128.png'})
   chrome.pageAction.show(data.tab.id)
 }
 
 /**
- * final step for collecting data to make a TabData
+ * collect data from content scripts to make a TabData
+ * otherwise if it's not an 'actionable' url
+ * just add the TabData
+ * 
  * @param  {Number} id         tab id
- * @param  {Object} tab        [description]
- * @param  {Object} action     [description]
+ * @param  {Object} tab        chrome tab information
+ * @param  {Object} action     actions as retrieve from chrome storage
  * @param  {Boolean} actionable if the URL is an actionUrl
  */
 function _makeTabData(id, tab, action, actionable) {
@@ -123,13 +166,17 @@ function _makeTabData(id, tab, action, actionable) {
       actions: []
     }
   }
+  
+  addTab({ tab: t })
 
   if (actionable && action.filePath) {
     t.action.filePath = action.filePath
 
+    // clean up actionInvalidNames to be an array
+    // should this be here? TODO
     if (action.actions) {
       action.actions.forEach((a, idx) => {
-        if (typeof a.actionInvalidNames === 'string') {
+        if (a.actionInvalidNames && typeof a.actionInvalidNames === 'string') {
           a.actionInvalidNames = a.actionInvalidNames.split(',')
           action.actions[idx] = a
         }
@@ -142,10 +189,7 @@ function _makeTabData(id, tab, action, actionable) {
       })
     })
   } else {
-    if (actionable) {
-      err(id, 'No file path set')
-    }
-    addTab({ tab: t })
+    if (actionable) dispatchErr(id, { err: 'NO_FILE_PATH' });
   }
 }
 
@@ -175,11 +219,11 @@ const chromeOnUpdated = (tabId, changedProps, tab) => {
 
   getActions((actions) => {
     for (let i = 0, l = actions.length; i < l; i++) {
-      if (_cmpUrl(tab.url, actions[i].actionUrl)) {
+      if (actions[i].actionUrl && _cmpUrl(tab.url, actions[i].actionUrl)) {
         add(actions[i], true)
         break;
       }
-      if (_cmpUrl(tab.url, actions[i].url)) {
+      if (actions[i].url && _cmpUrl(tab.url, actions[i].url)) {
         add(actions[i], false)
         break;
       }

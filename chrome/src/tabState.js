@@ -42,15 +42,21 @@ class TabState {
    * @param  {String} type  message type
    * @param  {String} msg   message
    */
-  messagesAdd(tabId, type, msg) {
+  messagesAdd(tabId, msg) {
     const dup = this.messages.filter((message) => {
-      if (message.id == tabId && message.msg == msg) {
+      if (message.id == tabId && message.type == msg.type) {
         return true
       }
       return false
     })
 
-    if (!dup.length) this.messages.push({ id: tabId, type, msg });
+    if (!dup.length) {
+      this.messages.push({ 
+        id: tabId, 
+        type: msg.type, 
+        msg: msg.msg
+      });
+    }
   }
 
   messagesClear(tabId) {

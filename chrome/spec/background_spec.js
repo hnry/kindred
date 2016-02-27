@@ -199,13 +199,13 @@ describe('background', () => {
       chrome.tabs.sendMessage = (id, data) => {
         if (count == 1) {
           testId = 1
-          testData = {type: 'edit', selector: '$selector', text: 'hî'}
+          testData = { id: 1, type: 'edit', selector: '$selector', text: 'hî'}
         } else if (count == 2) {
           testId = 201
-          testData = { type: 'edit', selector: '$selector', text: 'hî'}
+          testData = { id: 201, type: 'edit', selector: '$selector', text: 'hî'}
         } else if (count == 3) {
           testId = 12
-          testData = { type: 'edit', selector: 'element', text: 'hîi'}
+          testData = { id: 12, type: 'edit', selector: 'element', text: 'hîi'}
           done()
         }
         expect(id).toBe(testId)
@@ -251,7 +251,9 @@ describe('background', () => {
   describe('chromeOnUpdated', () => {
     it('removes from tab state if update changes previously match', (done) => {
       Tabs.state.push({id: 5})
-      background.chromeOnUpdated(5, { status: 'complete' }, { url: 'test' })
+      expect(Tabs.state.length).toEqual(1)
+      background.chromeOnUpdated(5, { status: 'complete' }, { url: 'test no match' })
+
       setTimeout(() => {
         expect(Tabs.state.length).toEqual(0)
         done()

@@ -1,4 +1,6 @@
-var codepacks = {
+console.log('kindred extension loaded');
+
+var strategies = {
   codemirror: {
     detect: function(el) {
       // scan for CodeMirror container
@@ -117,6 +119,13 @@ var codepacks = {
 function kindredName(tab, actions) {
   var names = actions.reduce(function(tmpNames, action) {
     var n = Sizzle(action.actionElementName)[0];
+    if (n === undefined) {
+      chrome.runtime.sendMessage({ err: 'ACTION_NAME_NOT_FOUND', id: tab.id, action: action.actionElementName })
+      // continue to loop and look for it even if it's undefined because 
+      // maybe it'll show up eventually?
+      // but this should be reported to the UI either way
+      return tmpNames
+    }
     var tag = n.tagName;
 
     var nText;
@@ -154,20 +163,21 @@ function kindredName(tab, actions) {
   }
 }
 
-function kindredEdit(selector, text) {
+function kindredEdit(tabId, selector, text) {
   var el = Sizzle(selector)[0];
   if (el === undefined) {
-    // TODO
-    // this needs to be reported to UI
-    console.log('actionElementEdit is not found on page');
+    // even though it's not found here, it doesn't give up
+    // indefinitely, as any subsequent incoming 
+    // file data will call this function again
+    chrome.runtime.sendMessage({ err: 'ACTION_EDIT_NOT_FOUND', id: tabId, action: selector })
     return;
   }
 
   var editor = '';
 
-  var packs = Object.keys(codepacks);
+  var packs = Object.keys(strategies);
   for (var i = 0, l = packs.length; i < l; i++) {
-    var detect = codepacks[packs[i]].detect(el);
+    var detect = strategies[packs[i]].detect(el);
     if (detect) {
       editor = detect;
       break;
@@ -188,14 +198,13 @@ function kindredEdit(selector, text) {
   }
 }
 
-console.log('kindred extension loaded');
 chrome.runtime.onMessage.addListener(function(msg, sender, reply) {
   switch(msg.type) {
     case 'name':
       kindredName(msg.tab, msg.actions);
       break;
     case 'edit':
-      kindredEdit(msg.selector, msg.text);
+      kindredEdit(msg.id, msg.selector, msg.text);
       break;
   }
 });

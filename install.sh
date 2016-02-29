@@ -3,15 +3,12 @@
 
 set -e
 
-make build_native
-
 DIR="$( cd "$( dirname "$0" )" && pwd )"
 if [ "$(uname -s)" == "Darwin" ]; then
   if [ "$(whoami)" == "root" ]; then
     TARGET_DIR="/Library/Google/Chrome/NativeMessagingHosts"
   else
-    # FIXME chrome canary for testing only
-    TARGET_DIR="$HOME/Library/Application Support/Google/Chrome Canary/NativeMessagingHosts"
+    TARGET_DIR="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
   fi
 else
   if [ "$(whoami)" == "root" ]; then

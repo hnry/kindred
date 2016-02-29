@@ -143,7 +143,7 @@ function addTab(data) {
   }
 
   Tabs.addState(data.tab)
-  chrome.pageAction.setIcon({tabId, path: 'icon128.png'})
+  chrome.pageAction.setIcon({tabId: data.tab.id, path: 'icon128.png'})
   chrome.pageAction.show(data.tab.id)
 }
 
@@ -173,7 +173,7 @@ function _makeTabData(id, tab, action, actionable) {
     t.action.filePath = action.filePath
 
     // clean up actionInvalidNames to be an array
-    // should this be here? TODO
+    // should this be done here? TODO
     if (action.actions) {
       action.actions.forEach((a, idx) => {
         if (a.actionInvalidNames && typeof a.actionInvalidNames === 'string') {

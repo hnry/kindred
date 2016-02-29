@@ -6,7 +6,9 @@ default: build
 build: build_js build_native
 
 build_native:
-	cd native; go build; cd ..
+	cd native; GOOS=darwin go build -o dist_osx/kindred
+	cd native; GOOS=windows go build -o dist_win/kindred
+	cd native; GOOS=linux go build  -o dist_linux/kindred
 
 build_js:
 	@echo "transpiling chrome extension src..."
